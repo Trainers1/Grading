@@ -1,0 +1,365 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import {
+  removeCardFrontImageAction,
+  updateCardDetailsAction,
+  uploadCardFrontImageAction,
+} from "@/lib/orders/admin-actions";
+import { PHOTO_UPLOAD } from "@/constants/grading";
+import type { Card, Order } from "@/types";
+import { useOrderFilters } from "./use-order-filters";
+import { OrderFilterToolbar } from "./order-filter-toolbar";
+
+type CardWithOrder = Card & { order: Order };
+
+const getCardOrder = (c: CardWithOrder) => c.order;
+
+function isCardComplete(c: Card): boolean {
+  return (
+    !!c.englishName?.trim() &&
+    !!c.setName?.trim() &&
+    !!c.cardNumber?.trim() &&
+    !!c.year?.trim()
+  );
+}
+
+export function CardInfoEntryTab({
+  orders,
+  cards,
+}: {
+  orders: Order[];
+  cards: Card[];
+}) {
+  // 같은 주문 내 카드를 주문 정보와 결합
+  const cardsWithOrder = useMemo<CardWithOrder[]>(() => {
+    const orderById = new Map<string, Order>();
+    for (const o of orders) orderById.set(o.id, o);
+    const result: CardWithOrder[] = [];
+    for (const c of cards) {
+      const o = orderById.get(c.orderId);
+      if (o) result.push({ ...c, order: o });
+    }
+    return result;
+  }, [orders, cards]);
+
+  const { state, setState, filtered } = useOrderFilters(
+    cardsWithOrder,
+    getCardOrder
+  );
+
+  const totalCards = filtered.length;
+  const pendingCards = filtered.filter((c) => !isCardComplete(c)).length;
+
+  return (
+    <div className="space-y-4">
+      <OrderFilterToolbar state={state} onChange={setState} />
+
+      <div className="overflow-hidden rounded-xl border border-border bg-card">
+        <div className="border-b border-border p-5">
+          <h2 className="font-semibold">카드 정보 작성 (결제 완료 → 접수 완료)</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            결제 완료된 주문의 카드들이 카드별로 나열됩니다. 영문명·세트·번호·연도
+            4개 항목을 모두 입력하면 저장되며, 한 주문의 모든 카드가 채워지면
+            자동으로 접수 완료 단계로 이동합니다. 앞면 이미지는 선택 항목입니다.
+            (빈칸 = 미입력)
+          </p>
+          <p className="mt-2 text-xs">
+            <span className="rounded-full bg-warning/10 px-2 py-0.5 font-medium text-warning">
+              미입력 {pendingCards}장
+            </span>{" "}
+            / 표시 {totalCards}장
+          </p>
+        </div>
+
+        {filtered.length === 0 ? (
+          <div className="px-5 py-10 text-center text-muted-foreground">
+            {cardsWithOrder.length === 0
+              ? "카드 정보 작성 대기 중인 주문이 없습니다."
+              : "조건에 맞는 카드가 없습니다."}
+          </div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead className="bg-muted/30 text-left text-xs uppercase text-muted-foreground">
+              <tr>
+                <th className="px-3 py-3">주문번호</th>
+                <th className="px-3 py-3">고객</th>
+                <th className="px-3 py-3">회사 / 서비스</th>
+                <th className="px-3 py-3">영문명 *</th>
+                <th className="px-3 py-3">세트 *</th>
+                <th className="px-3 py-3">번호 *</th>
+                <th className="px-3 py-3">연도 *</th>
+                <th className="px-3 py-3">신고가액</th>
+                <th className="px-3 py-3">앞면 이미지</th>
+                <th className="px-3 py-3 text-right">관리</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((c) => (
+                <CardRow key={c.id} card={c} order={c.order} />
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CardRow({ card, order }: { card: Card; order: Order }) {
+  const router = useRouter();
+  const [englishName, setEnglishName] = useState(card.englishName ?? "");
+  const [setName, setSetName] = useState(card.setName ?? "");
+  const [cardNumber, setCardNumber] = useState(card.cardNumber ?? "");
+  const [year, setYear] = useState(card.year ?? "");
+  const [declaredValue, setDeclaredValue] = useState<string>(
+    card.declaredValue ? String(card.declaredValue) : ""
+  );
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  // 이미지 업로드 상태 — 텍스트 저장과 독립
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
+  const [isImagePending, startImageTransition] = useTransition();
+
+  useEffect(() => {
+    setEnglishName(card.englishName ?? "");
+    setSetName(card.setName ?? "");
+    setCardNumber(card.cardNumber ?? "");
+    setYear(card.year ?? "");
+    setDeclaredValue(card.declaredValue ? String(card.declaredValue) : "");
+  }, [
+    card.englishName,
+    card.setName,
+    card.cardNumber,
+    card.year,
+    card.declaredValue,
+  ]);
+
+  const isComplete =
+    !!englishName.trim() &&
+    !!setName.trim() &&
+    !!cardNumber.trim() &&
+    !!year.trim();
+
+  const save = () => {
+    const parsedDeclared = declaredValue.trim()
+      ? Number(declaredValue.replace(/,/g, ""))
+      : null;
+    if (
+      parsedDeclared !== null &&
+      (!Number.isFinite(parsedDeclared) || parsedDeclared < 0)
+    ) {
+      setError("신고가액은 0 이상의 숫자여야 합니다.");
+      return;
+    }
+    setError(null);
+    setNotice(null);
+    startTransition(async () => {
+      const result = await updateCardDetailsAction({
+        cardId: card.id,
+        englishName: englishName.trim() || undefined,
+        setName: setName.trim() || undefined,
+        cardNumber: cardNumber.trim() || undefined,
+        year: year.trim() || undefined,
+        declaredValue: parsedDeclared,
+      });
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      setNotice(result.promoted ? "접수 완료로 이동됨" : "저장됨");
+      router.refresh();
+    });
+  };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // 같은 파일 재선택 허용
+    if (!file) return;
+
+    if (!(PHOTO_UPLOAD.acceptedFormats as readonly string[]).includes(file.type)) {
+      setImageError("JPG 또는 PNG 파일만 업로드할 수 있습니다.");
+      return;
+    }
+    if (file.size > PHOTO_UPLOAD.maxSizeBytes) {
+      setImageError(`이미지 크기는 ${PHOTO_UPLOAD.maxSizeMB}MB 이하여야 합니다.`);
+      return;
+    }
+
+    setImageError(null);
+    const formData = new FormData();
+    formData.append("cardId", card.id);
+    formData.append("file", file);
+    startImageTransition(async () => {
+      const result = await uploadCardFrontImageAction(formData);
+      if (!result.ok) {
+        setImageError(result.error);
+        return;
+      }
+      router.refresh();
+    });
+  };
+
+  const handleImageRemove = () => {
+    if (!window.confirm("앞면 이미지를 삭제하시겠습니까?")) return;
+    setImageError(null);
+    startImageTransition(async () => {
+      const result = await removeCardFrontImageAction({ cardId: card.id });
+      if (!result.ok) {
+        setImageError(result.error);
+        return;
+      }
+      router.refresh();
+    });
+  };
+
+  return (
+    <tr
+      className={`border-t border-border align-top ${
+        isComplete ? "bg-success/5" : ""
+      }`}
+    >
+      <td className="px-3 py-3">
+        <Link
+          href={`/admin/orders/${order.id}`}
+          className="font-mono text-primary hover:underline"
+        >
+          {order.id}
+        </Link>
+      </td>
+      <td className="px-3 py-3">{order.name}</td>
+      <td className="px-3 py-3 text-muted-foreground">
+        <div>{order.gradingCompany}</div>
+        <div className="text-[10px]">{order.serviceLevel}</div>
+      </td>
+      <td className="px-3 py-3">
+        <input
+          type="text"
+          value={englishName}
+          onChange={(e) => setEnglishName(e.target.value)}
+          placeholder="예: Pikachu"
+          disabled={isPending}
+          className="w-full rounded-md border border-border bg-background px-2 py-1 text-sm"
+        />
+      </td>
+      <td className="px-3 py-3">
+        <input
+          type="text"
+          value={setName}
+          onChange={(e) => setSetName(e.target.value)}
+          placeholder="세트"
+          disabled={isPending}
+          className="w-full rounded-md border border-border bg-background px-2 py-1 text-sm"
+        />
+      </td>
+      <td className="px-3 py-3">
+        <input
+          type="text"
+          value={cardNumber}
+          onChange={(e) => setCardNumber(e.target.value)}
+          placeholder="번호"
+          disabled={isPending}
+          className="w-full rounded-md border border-border bg-background px-2 py-1 text-sm"
+        />
+      </td>
+      <td className="px-3 py-3">
+        <input
+          type="text"
+          value={year}
+          onChange={(e) => setYear(e.target.value)}
+          placeholder="연도"
+          disabled={isPending}
+          className="w-full rounded-md border border-border bg-background px-2 py-1 text-sm"
+        />
+      </td>
+      <td className="px-3 py-3">
+        <input
+          type="text"
+          inputMode="numeric"
+          value={declaredValue}
+          onChange={(e) => setDeclaredValue(e.target.value)}
+          placeholder="원"
+          disabled={isPending}
+          className="w-full rounded-md border border-border bg-background px-2 py-1 text-sm"
+        />
+      </td>
+      <td className="px-3 py-3">
+        <div className="flex flex-col items-start gap-1">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={PHOTO_UPLOAD.acceptedExtensions}
+            onChange={handleImageSelect}
+            disabled={isImagePending}
+            className="hidden"
+          />
+          {card.frontImageUrl ? (
+            <>
+              <a
+                href={card.frontImageUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={card.frontImageUrl}
+                  alt="카드 앞면"
+                  className="h-14 w-10 rounded border border-border object-cover"
+                />
+              </a>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isImagePending}
+                  className="text-[10px] text-primary hover:underline disabled:opacity-50"
+                >
+                  {isImagePending ? "처리 중..." : "변경"}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleImageRemove}
+                  disabled={isImagePending}
+                  className="text-[10px] text-error hover:underline disabled:opacity-50"
+                >
+                  삭제
+                </button>
+              </div>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isImagePending}
+              className="rounded-md border border-border px-2 py-1 text-[10px] text-muted-foreground hover:text-foreground disabled:opacity-50"
+            >
+              {isImagePending ? "업로드 중..." : "이미지 업로드"}
+            </button>
+          )}
+          {imageError && <p className="text-[10px] text-error">{imageError}</p>}
+        </div>
+      </td>
+      <td className="px-3 py-3 text-right">
+        <div className="flex flex-col items-end gap-1">
+          <button
+            type="button"
+            onClick={save}
+            disabled={isPending}
+            className="rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+          >
+            {isPending ? "저장 중..." : "저장"}
+          </button>
+          {error && <p className="text-[10px] text-error">{error}</p>}
+          {notice && !error && (
+            <p className="text-[10px] text-success">{notice}</p>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+}

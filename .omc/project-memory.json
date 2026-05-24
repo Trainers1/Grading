@@ -1,0 +1,484 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1779542037225,
+  "projectRoot": "D:\\Trainers\\Grading\\trainers-grading",
+  "techStack": {
+    "languages": [
+      {
+        "name": "JavaScript/TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "package.json"
+        ]
+      },
+      {
+        "name": "TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "tsconfig.json"
+        ]
+      }
+    ],
+    "frameworks": [
+      {
+        "name": "next",
+        "version": "16.2.6",
+        "category": "fullstack"
+      },
+      {
+        "name": "react",
+        "version": "19.2.4",
+        "category": "frontend"
+      },
+      {
+        "name": "react-dom",
+        "version": "19.2.4",
+        "category": "frontend"
+      }
+    ],
+    "packageManager": "pnpm",
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": "cd \"D:/Trainers/Grading/trainers-grading\" && pnpm build 2>&1 | tail -80",
+    "testCommand": null,
+    "lintCommand": "pnpm lint",
+    "devCommand": "pnpm dev",
+    "scripts": {
+      "dev": "next dev --turbopack",
+      "build": "next build",
+      "start": "next start",
+      "lint": "next lint",
+      "smoke:push": "node --env-file=.env.local scripts/smoke-push.mjs",
+      "verify:push-strings": "node scripts/verify-push-strings.mjs"
+    }
+  },
+  "conventions": {
+    "namingStyle": null,
+    "importStyle": null,
+    "testPattern": null,
+    "fileOrganization": "type-based"
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [
+      "docs",
+      "public",
+      "scripts",
+      "src"
+    ],
+    "gitBranches": null
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "docs": {
+      "path": "docs",
+      "purpose": "Documentation",
+      "fileCount": 2,
+      "lastAccessed": 1779542037113,
+      "keyFiles": [
+        "db-schema.md",
+        "TODOS.md"
+      ]
+    },
+    "public": {
+      "path": "public",
+      "purpose": "Public files",
+      "fileCount": 2,
+      "lastAccessed": 1779542037127,
+      "keyFiles": [
+        "AGENTS.md",
+        "sw.js"
+      ]
+    },
+    "scripts": {
+      "path": "scripts",
+      "purpose": "Build/utility scripts",
+      "fileCount": 4,
+      "lastAccessed": 1779542037129,
+      "keyFiles": [
+        "generate-placeholder-icons.ps1",
+        "smoke-auth.mjs",
+        "smoke-push.mjs",
+        "verify-push-strings.mjs"
+      ]
+    },
+    "src": {
+      "path": "src",
+      "purpose": "Source code",
+      "fileCount": 2,
+      "lastAccessed": 1779542037133,
+      "keyFiles": [
+        "AGENTS.md",
+        "middleware.ts"
+      ]
+    },
+    "supabase": {
+      "path": "supabase",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1779542037134,
+      "keyFiles": [
+        "AGENTS.md"
+      ]
+    },
+    "src\\app": {
+      "path": "src\\app",
+      "purpose": "Application code",
+      "fileCount": 4,
+      "lastAccessed": 1779542037138,
+      "keyFiles": [
+        "AGENTS.md",
+        "globals.css",
+        "layout.tsx"
+      ]
+    },
+    "src\\components": {
+      "path": "src\\components",
+      "purpose": "UI components",
+      "fileCount": 1,
+      "lastAccessed": 1779542037139,
+      "keyFiles": [
+        "AGENTS.md"
+      ]
+    },
+    "src\\lib": {
+      "path": "src\\lib",
+      "purpose": "Library code",
+      "fileCount": 2,
+      "lastAccessed": 1779542037140,
+      "keyFiles": [
+        "AGENTS.md",
+        "utils.ts"
+      ]
+    },
+    "src\\types": {
+      "path": "src\\types",
+      "purpose": "Type definitions",
+      "fileCount": 7,
+      "lastAccessed": 1779542037142,
+      "keyFiles": [
+        "AGENTS.md",
+        "apply-form.ts",
+        "batch.ts"
+      ]
+    },
+    "supabase\\migrations": {
+      "path": "supabase\\migrations",
+      "purpose": "Database migrations",
+      "fileCount": 17,
+      "lastAccessed": 1779542037143,
+      "keyFiles": [
+        "001_initial_schema.sql",
+        "002_redesign.sql",
+        "003_pwa_push.sql"
+      ]
+    }
+  },
+  "hotPaths": [
+    {
+      "path": "src\\app\\(user)\\mypage\\orders\\[id]\\_components\\order-detail-client.tsx",
+      "accessCount": 43,
+      "lastAccessed": 1779608250070,
+      "type": "file"
+    },
+    {
+      "path": "src\\lib\\orders\\actions.ts",
+      "accessCount": 37,
+      "lastAccessed": 1779610021217,
+      "type": "file"
+    },
+    {
+      "path": "src\\lib\\orders\\admin-actions.ts",
+      "accessCount": 23,
+      "lastAccessed": 1779547065851,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\(admin)\\admin\\orders\\page.tsx",
+      "accessCount": 19,
+      "lastAccessed": 1779420138125,
+      "type": "file"
+    },
+    {
+      "path": "src\\lib\\supabase\\database.types.ts",
+      "accessCount": 19,
+      "lastAccessed": 1779547232447,
+      "type": "file"
+    },
+    {
+      "path": "src\\lib\\orders\\queries.ts",
+      "accessCount": 18,
+      "lastAccessed": 1779607998544,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\(admin)\\admin\\batches\\page.tsx",
+      "accessCount": 14,
+      "lastAccessed": 1779609738647,
+      "type": "file"
+    },
+    {
+      "path": "src\\types\\order.ts",
+      "accessCount": 13,
+      "lastAccessed": 1779608125577,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\(user)\\mypage\\orders\\[id]\\shipping\\page.tsx",
+      "accessCount": 11,
+      "lastAccessed": 1779608313816,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\(user)\\mypage\\orders\\[id]\\shipping\\_components\\shipping-client.tsx",
+      "accessCount": 8,
+      "lastAccessed": 1779608335564,
+      "type": "file"
+    },
+    {
+      "path": "src\\constants\\grading.ts",
+      "accessCount": 6,
+      "lastAccessed": 1779546809486,
+      "type": "file"
+    },
+    {
+      "path": "src",
+      "accessCount": 6,
+      "lastAccessed": 1779547083431,
+      "type": "directory"
+    },
+    {
+      "path": "src\\app\\(admin)\\admin\\orders\\_components\\ship-arrive-tab.tsx",
+      "accessCount": 5,
+      "lastAccessed": 1779420089739,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\(user)\\apply\\page.tsx",
+      "accessCount": 5,
+      "lastAccessed": 1779546065039,
+      "type": "file"
+    },
+    {
+      "path": "docs\\superpowers\\plans\\2026-05-22-order-tabs-search-filter-card-image.md",
+      "accessCount": 4,
+      "lastAccessed": 1779419867275,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\(admin)\\admin\\batches\\_components\\tracking-input.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1779381603658,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\(admin)\\admin\\orders\\_components\\intake-management-tab.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1779420051200,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\(admin)\\admin\\orders\\_components\\pickup-complete-tab.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1779420060694,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\(admin)\\admin\\orders\\_components\\card-info-entry-tab.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1779420110657,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\(admin)\\admin\\orders\\_components\\all-orders-tab.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1779420125963,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\(user)\\mypage\\orders\\[id]\\overcharge\\page.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1779425853274,
+      "type": "file"
+    },
+    {
+      "path": "supabase\\migrations\\002_redesign.sql",
+      "accessCount": 3,
+      "lastAccessed": 1779544010674,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\(admin)\\admin\\orders\\[id]\\_components\\status-changer.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1779378949884,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\api\\orders\\auto-promote\\route.ts",
+      "accessCount": 2,
+      "lastAccessed": 1779379068103,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\(user)\\mypage\\orders\\[id]\\overcharge\\_components\\overcharge-client.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1779380596900,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\admin\\admin-sidebar.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1779381600477,
+      "type": "file"
+    },
+    {
+      "path": "supabase\\migrations\\011_auto_cancel_unpaid.sql",
+      "accessCount": 2,
+      "lastAccessed": 1779384799731,
+      "type": "file"
+    },
+    {
+      "path": "vercel.json",
+      "accessCount": 2,
+      "lastAccessed": 1779385117750,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\(admin)\\admin\\orders\\_components\\all-orders-filter-bar.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1779418577272,
+      "type": "file"
+    },
+    {
+      "path": "docs\\superpowers\\specs\\2026-05-22-order-tabs-search-filter-card-image-design.md",
+      "accessCount": 2,
+      "lastAccessed": 1779419186743,
+      "type": "file"
+    },
+    {
+      "path": "src\\lib\\supabase\\service.ts",
+      "accessCount": 2,
+      "lastAccessed": 1779419477597,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\(admin)\\admin\\grading\\page.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1779378798982,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\(admin)\\admin\\grading\\AGENTS.md",
+      "accessCount": 1,
+      "lastAccessed": 1779378799196,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\(admin)\\admin\\grading\\_components\\pending-grade-form.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1779378799731,
+      "type": "file"
+    },
+    {
+      "path": "supabase\\migrations\\013_simplify_card_intake.sql",
+      "accessCount": 1,
+      "lastAccessed": 1779378881616,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\(admin)\\admin\\(dashboard)\\page.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1779378993334,
+      "type": "file"
+    },
+    {
+      "path": ".env.local",
+      "accessCount": 1,
+      "lastAccessed": 1779379073469,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\(admin)\\admin\\batches\\AGENTS.md",
+      "accessCount": 1,
+      "lastAccessed": 1779380526872,
+      "type": "file"
+    },
+    {
+      "path": "supabase\\migrations\\014_shipment_group.sql",
+      "accessCount": 1,
+      "lastAccessed": 1779382685689,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\(admin)\\admin\\orders\\AGENTS.md",
+      "accessCount": 1,
+      "lastAccessed": 1779383238132,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\(admin)\\admin\\orders\\_components\\orders-bulk-table.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1779383537907,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\api\\orders\\auto-cancel-unpaid\\route.ts",
+      "accessCount": 1,
+      "lastAccessed": 1779384800247,
+      "type": "file"
+    },
+    {
+      "path": "supabase\\migrations\\015_auto_complete_delivered.sql",
+      "accessCount": 1,
+      "lastAccessed": 1779385087027,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\api\\orders\\auto-complete-delivered\\route.ts",
+      "accessCount": 1,
+      "lastAccessed": 1779385092386,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\(admin)\\admin\\orders\\[id]\\_components\\card-editor.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1779418688986,
+      "type": "file"
+    },
+    {
+      "path": "supabase\\migrations\\005_order_id_and_card_image.sql",
+      "accessCount": 1,
+      "lastAccessed": 1779419478125,
+      "type": "file"
+    },
+    {
+      "path": "supabase\\migrations\\016_card_images_bucket.sql",
+      "accessCount": 1,
+      "lastAccessed": 1779419964266,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\(admin)\\admin\\orders\\_components\\use-order-filters.ts",
+      "accessCount": 1,
+      "lastAccessed": 1779419968118,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\(admin)\\admin\\orders\\_components\\order-filter-toolbar.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1779419977761,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\(admin)\\admin\\orders\\_components\\cancelled-orders-tab.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1779420067992,
+      "type": "file"
+    }
+  ],
+  "userDirectives": []
+}

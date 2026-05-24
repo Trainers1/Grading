@@ -1,0 +1,14 @@
+﻿src/app/(admin)/admin/notifications/page.tsx(91,41): error TS2339: Property 'dispatched_at' does not exist on type 'never'.
+src/app/api/push/subscribe/route.ts(73,28): error TS2339: Property 'subscriber_email' does not exist on type 'never'.
+src/app/api/push/subscribe/route.ts(87,63): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(values: never, options?: { onConflict?: string | undefined; ignoreDuplicates?: boolean | undefined; count?: "exact" | "planned" | "estimated" | undefined; } | undefined): PostgrestFilterBuilder<{ ...; }, ... 5 more ..., "POST">', gave the following error.
+    Argument of type '{ subscriber_email: string; endpoint: string; p256dh: string; auth_key: string; user_agent: string | null; expired_at: null; }' is not assignable to parameter of type 'never'.
+  Overload 2 of 2, '(values: never[], options?: { onConflict?: string | undefined; ignoreDuplicates?: boolean | undefined; count?: "exact" | "planned" | "estimated" | undefined; defaultToNull?: boolean | undefined; } | undefined): PostgrestFilterBuilder<...>', gave the following error.
+    Object literal may only specify known properties, and 'subscriber_email' does not exist in type 'never[]'.
+src/app/api/push/unsubscribe/route.ts(49,13): error TS2345: Argument of type '{ expired_at: string; }' is not assignable to parameter of type 'never'.
+src/lib/push/dispatcher.ts(118,17): error TS2345: Argument of type '{ skipped_reason: string; dispatched_at: string; }' is not assignable to parameter of type 'never'.
+src/lib/push/dispatcher.ts(119,26): error TS2339: Property 'id' does not exist on type 'never'.
+src/lib/push/dispatcher.ts(125,18): error TS2339: Property 'id' does not exist on type 'never'.
+src/lib/push/dispatcher.ts(126,24): error TS2339: Property 'order_id' does not exist on type 'never'.
+src/lib/push/dispatcher.ts(127,35): error TS2339: Property 'order_status_log_id' does not exist on type 'never'.
+src/lib/push/dispatcher.ts(128,26): error TS2339: Property 'status_key' does not exist on type 'never'.
