@@ -35,6 +35,29 @@ function getStatusColor(status: Order["orderStatus"]) {
   return "bg-primary/10 text-primary";
 }
 
+// 신청 후 미결제 — 그레이딩 신청만 하고 선결제가 안 된 상태.
+function needsPrepayment(o: Order): boolean {
+  return o.orderStatus === "PAYMENT_PENDING";
+}
+
+// 오버차지 결제 필요 — 운영자가 추가 비용을 청구하고 결제 대기.
+function needsOvercharge(o: Order): boolean {
+  return o.paymentStatus === "OVERCHARGE_PENDING";
+}
+
+// 배송비 결제 필요 — 택배 수령 + 트레이너스 도착 + 합배송 묶음 미발급(미결제).
+function needsShippingFee(o: Order): boolean {
+  return (
+    o.pickupMethod === "DELIVERY" &&
+    o.orderStatus === "TRAINERS_ARRIVED" &&
+    o.shipmentGroupId == null
+  );
+}
+
+function needsAnyPayment(o: Order): boolean {
+  return needsPrepayment(o) || needsOvercharge(o) || needsShippingFee(o);
+}
+
 function filterOrders(orders: Order[], tab: FilterTab): Order[] {
   switch (tab) {
     case "in_progress":
@@ -47,11 +70,7 @@ function filterOrders(orders: Order[], tab: FilterTab): Order[] {
     case "completed":
       return orders.filter((o) => o.orderStatus === "COMPLETED");
     case "payment_needed":
-      return orders.filter(
-        (o) =>
-          o.orderStatus === "PAYMENT_PENDING" ||
-          o.paymentStatus === "OVERCHARGE_PENDING"
-      );
+      return orders.filter(needsAnyPayment);
     default:
       return orders;
   }
@@ -151,16 +170,27 @@ export function MyOrdersList({ orders }: { orders: Order[] }) {
                   {ORDER_STATUS_LABELS[order.orderStatus]}
                 </span>
               </div>
-              <div className="mt-3 flex items-center justify-between text-sm">
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm">
                 <span className="text-muted-foreground">
                   결제 금액: {order.prepaidAmount.toLocaleString()}원
                 </span>
-                {order.overchargeAmount &&
-                  order.paymentStatus === "OVERCHARGE_PENDING" && (
+                <div className="flex flex-wrap items-center gap-2">
+                  {needsPrepayment(order) && (
+                    <span className="text-xs font-medium text-error">
+                      신청 후 미결제
+                    </span>
+                  )}
+                  {order.overchargeAmount && needsOvercharge(order) && (
                     <span className="text-xs font-medium text-error">
                       오버차지 {order.overchargeAmount.toLocaleString()}원 미결제
                     </span>
                   )}
+                  {needsShippingFee(order) && (
+                    <span className="text-xs font-medium text-error">
+                      배송비 미결제
+                    </span>
+                  )}
+                </div>
               </div>
             </Link>
           ))

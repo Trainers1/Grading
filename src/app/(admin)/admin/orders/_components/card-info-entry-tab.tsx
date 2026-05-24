@@ -9,6 +9,7 @@ import {
   uploadCardFrontImageAction,
 } from "@/lib/orders/admin-actions";
 import { PHOTO_UPLOAD } from "@/constants/grading";
+import type { CardTemplate } from "@/lib/orders/queries";
 import type { Card, Order } from "@/types";
 import { useOrderFilters } from "./use-order-filters";
 import { OrderFilterToolbar } from "./order-filter-toolbar";
@@ -16,6 +17,9 @@ import { OrderFilterToolbar } from "./order-filter-toolbar";
 type CardWithOrder = Card & { order: Order };
 
 const getCardOrder = (c: CardWithOrder) => c.order;
+
+const AUTOCOMPLETE_MIN_CHARS = 2;
+const AUTOCOMPLETE_MAX_RESULTS = 8;
 
 function isCardComplete(c: Card): boolean {
   return (
@@ -29,9 +33,11 @@ function isCardComplete(c: Card): boolean {
 export function CardInfoEntryTab({
   orders,
   cards,
+  templates = [],
 }: {
   orders: Order[];
   cards: Card[];
+  templates?: CardTemplate[];
 }) {
   // 같은 주문 내 카드를 주문 정보와 결합
   const cardsWithOrder = useMemo<CardWithOrder[]>(() => {
@@ -98,7 +104,12 @@ export function CardInfoEntryTab({
             </thead>
             <tbody>
               {filtered.map((c) => (
-                <CardRow key={c.id} card={c} order={c.order} />
+                <CardRow
+                  key={c.id}
+                  card={c}
+                  order={c.order}
+                  templates={templates}
+                />
               ))}
             </tbody>
           </table>
@@ -108,7 +119,15 @@ export function CardInfoEntryTab({
   );
 }
 
-function CardRow({ card, order }: { card: Card; order: Order }) {
+function CardRow({
+  card,
+  order,
+  templates,
+}: {
+  card: Card;
+  order: Order;
+  templates: CardTemplate[];
+}) {
   const router = useRouter();
   const [englishName, setEnglishName] = useState(card.englishName ?? "");
   const [setName, setSetName] = useState(card.setName ?? "");
@@ -120,6 +139,54 @@ function CardRow({ card, order }: { card: Card; order: Order }) {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  // 자동완성 — 영문명 입력 시 과거 카드 템플릿 후보 표시.
+  const englishNameInputRef = useRef<HTMLInputElement>(null);
+  const [isAutocompleteOpen, setIsAutocompleteOpen] = useState(false);
+  const [dropdownPos, setDropdownPos] = useState<
+    | { top: number; left: number; width: number }
+    | null
+  >(null);
+
+  const autocompleteSuggestions = useMemo<CardTemplate[]>(() => {
+    const q = englishName.trim().toLowerCase();
+    if (q.length < AUTOCOMPLETE_MIN_CHARS) return [];
+    const matched: CardTemplate[] = [];
+    for (const t of templates) {
+      if (t.englishName.toLowerCase().includes(q)) {
+        matched.push(t);
+        if (matched.length >= AUTOCOMPLETE_MAX_RESULTS) break;
+      }
+    }
+    return matched;
+  }, [englishName, templates]);
+
+  // 드롭다운이 부모의 overflow-hidden 에 가려지지 않도록 fixed 좌표 계산.
+  useEffect(() => {
+    if (!isAutocompleteOpen) return;
+    const update = () => {
+      const el = englishNameInputRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      setDropdownPos({ top: r.bottom + 4, left: r.left, width: r.width });
+    };
+    update();
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
+  }, [isAutocompleteOpen]);
+
+  const applyTemplate = (t: CardTemplate) => {
+    setEnglishName(t.englishName);
+    setSetName(t.setName);
+    setCardNumber(t.cardNumber);
+    setYear(t.year);
+    setDeclaredValue(t.declaredValue ? String(t.declaredValue) : "");
+    setIsAutocompleteOpen(false);
+  };
 
   // 이미지 업로드 상태 — 텍스트 저장과 독립
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -239,13 +306,76 @@ function CardRow({ card, order }: { card: Card; order: Order }) {
       </td>
       <td className="px-3 py-3">
         <input
+          ref={englishNameInputRef}
           type="text"
           value={englishName}
-          onChange={(e) => setEnglishName(e.target.value)}
+          onChange={(e) => {
+            setEnglishName(e.target.value);
+            setIsAutocompleteOpen(true);
+          }}
+          onFocus={() => setIsAutocompleteOpen(true)}
+          onBlur={() => {
+            // 후보 클릭 처리 후 닫히도록 약간의 지연 둠.
+            setTimeout(() => setIsAutocompleteOpen(false), 120);
+          }}
           placeholder="예: Pikachu"
           disabled={isPending}
           className="w-full rounded-md border border-border bg-background px-2 py-1 text-sm"
+          autoComplete="off"
         />
+        {isAutocompleteOpen &&
+          dropdownPos &&
+          autocompleteSuggestions.length > 0 && (
+            <ul
+              style={{
+                position: "fixed",
+                top: dropdownPos.top,
+                left: dropdownPos.left,
+                width: Math.max(dropdownPos.width, 280),
+              }}
+              className="z-50 max-h-80 overflow-auto rounded-md border border-border bg-card shadow-xl"
+            >
+              {autocompleteSuggestions.map((t, idx) => (
+                <li
+                  key={`${t.englishName}-${t.setName}-${t.cardNumber}-${t.year}-${idx}`}
+                >
+                  <button
+                    type="button"
+                    onMouseDown={(e) => {
+                      // blur 보다 먼저 동작하도록 mousedown 사용.
+                      e.preventDefault();
+                      applyTemplate(t);
+                    }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-muted/40"
+                  >
+                    {t.frontImageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={t.frontImageUrl}
+                        alt=""
+                        className="h-12 w-9 flex-shrink-0 rounded border border-border object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-12 w-9 flex-shrink-0 items-center justify-center rounded border border-dashed border-border text-[9px] text-muted-foreground">
+                        없음
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-xs font-medium text-foreground">
+                        {t.englishName}
+                      </div>
+                      <div className="mt-0.5 truncate text-[10px] text-muted-foreground">
+                        {t.setName} · #{t.cardNumber} · {t.year}
+                        {t.declaredValue
+                          ? ` · ₩${t.declaredValue.toLocaleString("ko-KR")}`
+                          : ""}
+                      </div>
+                    </div>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
       </td>
       <td className="px-3 py-3">
         <input

@@ -26,364 +26,20 @@ import type {
 //       → log_orders_status_change 트리거가 status_log row 생성
 //       → fn_enqueue_milestone_dispatch 트리거가 milestone push enqueue.
 
-export type PaymentMethodChoice = "ONSITE" | "CARD" | "TRANSFER" | "EASY_PAY";
+// 온라인 결제 수단은 모두 토스 결제 위젯을 통과한다.
+// 사용자 선택은 위젯 진입 시 어떤 영역(토스페이 vs 그 외 간편결제)에
+// 우선 노출할지 힌트로만 사용되고, 실제 결제수단(카드/이체/간편결제 종류)은
+// 토스 위젯 안에서 결정된다. DB 에는 사용자가 처음에 선택한 라벨이 저장된다.
+export type PaymentMethodChoice = "ONSITE" | "TOSSPAY" | "EXTERNAL_PAY";
 
 const PAYMENT_METHOD_LABEL: Record<PaymentMethodChoice, string> = {
   ONSITE: "현장결제",
-  CARD: "신용카드",
-  TRANSFER: "계좌이체",
-  EASY_PAY: "간편결제",
+  TOSSPAY: "토스페이",
+  EXTERNAL_PAY: "외부 간편결제",
 };
 
 type PayActionResult = { ok: false; error: string } | { ok: true };
 
-export async function payOrderPrepaymentAction(input: {
-  orderId: string;
-  method: PaymentMethodChoice;
-}): Promise<PayActionResult> {
-  if (!input.orderId) return { ok: false, error: "주문번호가 누락되었습니다." };
-  if (!PAYMENT_METHOD_LABEL[input.method]) {
-    return { ok: false, error: "허용되지 않은 결제 수단입니다." };
-  }
-
-  // 1) 인증 + 주문 소유자 검증
-  const supabase = await createServerClient();
-  const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) {
-    return { ok: false, error: "로그인이 필요합니다." };
-  }
-
-  const { data: order, error: oErr } = await supabase
-    .from("orders")
-    .select(
-      "id, user_id, prepaid_amount, payment_status, order_status, cancelled_at"
-    )
-    .eq("id", input.orderId)
-    .maybeSingle();
-
-  if (oErr || !order) {
-    return { ok: false, error: "주문을 찾을 수 없습니다." };
-  }
-  if (order.user_id !== auth.user.id) {
-    return { ok: false, error: "본인 주문에만 결제할 수 있습니다." };
-  }
-  if (order.cancelled_at) {
-    return { ok: false, error: "취소된 주문은 결제할 수 없습니다." };
-  }
-  if (order.payment_status === "PAID") {
-    return { ok: false, error: "이미 결제 완료된 주문입니다." };
-  }
-  if (order.payment_status !== "PENDING") {
-    return {
-      ok: false,
-      error: `현재 결제 상태(${order.payment_status})에서는 선결제 처리할 수 없습니다.`,
-    };
-  }
-
-  // 2) service-role 로 payments + orders 갱신 (RLS 우회: 인증/소유자 검증 완료)
-  let service;
-  try {
-    service = createServiceClient();
-  } catch (err) {
-    console.error("[payments] service-role unavailable", err);
-    return { ok: false, error: "서비스가 일시적으로 불가능합니다." };
-  }
-
-  const nowIso = new Date().toISOString();
-  const { error: insErr } = await service.from("payments").insert({
-    order_id: order.id,
-    payment_type: "PREPAYMENT",
-    amount: order.prepaid_amount,
-    payment_method: PAYMENT_METHOD_LABEL[input.method],
-    status: "COMPLETED",
-    paid_at: nowIso,
-  });
-
-  if (insErr) {
-    console.error("[payments] insert prepayment failed", insErr);
-    return { ok: false, error: "결제 기록 저장에 실패했습니다." };
-  }
-
-  // payment_status='PAID' + order_status='CARD_DELIVERY_PENDING' 동시 갱신.
-  // BEFORE trg_auto_promote_on_payment_paid 도 order_status 를 동일 값으로 세팅하지만,
-  // AFTER UPDATE OF order_status 트리거(log_orders_status_change / milestone push)는
-  // UPDATE 문의 SET 리스트만 보고 발화하므로 order_status 를 명시적으로 SET 해야 함.
-  const orderUpdate: { payment_status: "PAID"; order_status?: "CARD_DELIVERY_PENDING" } = {
-    payment_status: "PAID",
-  };
-  if (order.order_status === "PAYMENT_PENDING") {
-    orderUpdate.order_status = "CARD_DELIVERY_PENDING";
-  }
-
-  const { error: updErr } = await service
-    .from("orders")
-    .update(orderUpdate)
-    .eq("id", order.id);
-
-  if (updErr) {
-    console.error("[payments] orders.payment_status update failed", updErr);
-    return { ok: false, error: "결제 상태 갱신에 실패했습니다." };
-  }
-
-  revalidatePath("/mypage/orders");
-  revalidatePath(`/mypage/orders/${order.id}`);
-  revalidatePath("/admin/orders");
-  revalidatePath(`/admin/orders/${order.id}`);
-  return { ok: true };
-}
-
-export async function payOrderOverchargeAction(input: {
-  orderId: string;
-  method: PaymentMethodChoice;
-}): Promise<PayActionResult> {
-  if (!input.orderId) return { ok: false, error: "주문번호가 누락되었습니다." };
-  if (!PAYMENT_METHOD_LABEL[input.method]) {
-    return { ok: false, error: "허용되지 않은 결제 수단입니다." };
-  }
-
-  const supabase = await createServerClient();
-  const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) {
-    return { ok: false, error: "로그인이 필요합니다." };
-  }
-
-  const { data: order, error: oErr } = await supabase
-    .from("orders")
-    .select(
-      "id, user_id, overcharge_amount, payment_status, cancelled_at"
-    )
-    .eq("id", input.orderId)
-    .maybeSingle();
-
-  if (oErr || !order) {
-    return { ok: false, error: "주문을 찾을 수 없습니다." };
-  }
-  if (order.user_id !== auth.user.id) {
-    return { ok: false, error: "본인 주문에만 결제할 수 있습니다." };
-  }
-  if (order.cancelled_at) {
-    return { ok: false, error: "취소된 주문은 결제할 수 없습니다." };
-  }
-  if (order.payment_status !== "OVERCHARGE_PENDING") {
-    return { ok: false, error: "오버차지 결제 대기 상태가 아닙니다." };
-  }
-  if (!order.overcharge_amount || order.overcharge_amount <= 0) {
-    return { ok: false, error: "결제할 오버차지 금액이 없습니다." };
-  }
-
-  let service;
-  try {
-    service = createServiceClient();
-  } catch (err) {
-    console.error("[payments] service-role unavailable", err);
-    return { ok: false, error: "서비스가 일시적으로 불가능합니다." };
-  }
-
-  const nowIso = new Date().toISOString();
-  const { error: insErr } = await service.from("payments").insert({
-    order_id: order.id,
-    payment_type: "OVERCHARGE",
-    amount: order.overcharge_amount,
-    payment_method: PAYMENT_METHOD_LABEL[input.method],
-    status: "COMPLETED",
-    paid_at: nowIso,
-  });
-  if (insErr) {
-    console.error("[payments] insert overcharge failed", insErr);
-    return { ok: false, error: "결제 기록 저장에 실패했습니다." };
-  }
-
-  const { error: updErr } = await service
-    .from("orders")
-    .update({ payment_status: "OVERCHARGE_PAID" })
-    .eq("id", order.id);
-  if (updErr) {
-    console.error("[payments] overcharge payment_status update failed", updErr);
-    return { ok: false, error: "결제 상태 갱신에 실패했습니다." };
-  }
-
-  revalidatePath("/mypage/orders");
-  revalidatePath(`/mypage/orders/${order.id}`);
-  revalidatePath("/admin/orders");
-  revalidatePath(`/admin/orders/${order.id}`);
-  return { ok: true };
-}
-
-// 택배비(SHIPPING) 결제 액션 — 고객이 마이페이지에서 택배비를 결제한다.
-// 합배송: orderIds 에 여러 주문을 담으면 한 번의 결제(3,000원 고정)로 묶을 수 있다.
-// 대상: 모두 본인 소유 + DELIVERY + TRAINERS_ARRIVED + 미취소 + 미결제 + 배송지 동일.
-// 효과: shipment_group_id(UUID) 1개 발급 → 묶음 전 주문에 set (= "택배비 결제 완료" 기준).
-//       payments 에 SHIPPING 결제 행 1개(대표 주문) + 대표 주문 shipping_fee 기록.
-// 현장결제(ONSITE) 는 택배 수령 주문이라 불가 — 온라인 결제 수단만 허용.
-export async function payShippingFeeAction(input: {
-  orderIds: string[];
-  method: PaymentMethodChoice;
-}): Promise<PayActionResult> {
-  if (input.method === "ONSITE" || !PAYMENT_METHOD_LABEL[input.method]) {
-    return {
-      ok: false,
-      error: "택배비는 온라인 결제 수단으로만 결제할 수 있습니다.",
-    };
-  }
-  const orderIds = Array.from(
-    new Set((input.orderIds ?? []).filter(Boolean))
-  );
-  if (orderIds.length === 0) {
-    return { ok: false, error: "결제할 주문이 없습니다." };
-  }
-
-  const supabase = await createServerClient();
-  const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) {
-    return { ok: false, error: "로그인이 필요합니다." };
-  }
-
-  const { data: orders, error: oErr } = await supabase
-    .from("orders")
-    .select(
-      "id, user_id, pickup_method, order_status, postal_code, delivery_address, delivery_address_detail, address_source, shipment_group_id, cancelled_at"
-    )
-    .in("id", orderIds);
-
-  if (oErr) {
-    console.error("[payments] shipping fee order fetch failed", oErr);
-    return { ok: false, error: "주문 조회 중 오류가 발생했습니다." };
-  }
-  if (!orders || orders.length !== orderIds.length) {
-    return { ok: false, error: "일부 주문을 찾을 수 없습니다." };
-  }
-
-  // 묶음 전 주문 공통 검증
-  for (const order of orders) {
-    if (order.user_id !== auth.user.id) {
-      return { ok: false, error: "본인 주문에만 결제할 수 있습니다." };
-    }
-    if (order.cancelled_at) {
-      return { ok: false, error: "취소된 주문이 포함되어 있습니다." };
-    }
-    if (order.pickup_method !== "DELIVERY") {
-      return {
-        ok: false,
-        error: "택배 수령이 아닌 주문이 포함되어 있습니다.",
-      };
-    }
-    if (order.order_status !== "TRAINERS_ARRIVED") {
-      return {
-        ok: false,
-        error: "아직 택배비 결제 단계가 아닌 주문이 포함되어 있습니다.",
-      };
-    }
-    if (order.shipment_group_id) {
-      return {
-        ok: false,
-        error: "이미 택배비가 결제된 주문이 포함되어 있습니다.",
-      };
-    }
-  }
-
-  // 합배송 — 한 박스이므로 배송지가 모두 같아야 한다.
-  // 우편번호 + 기본 주소 + 상세 주소 3종을 모두 합쳐 비교한다.
-  // addressSource="MY" 인 주문은 항상 최신 회원 주소(profile)로 resolve 후 비교한다.
-  // 신청 당시 입력한 snapshot 이 달라도 현재 회원 주소가 같으면 합배송 가능.
-  let myProfileAddress: ProfileAddress | null = null;
-  if (orders.some((o) => o.address_source === "MY")) {
-    let svc;
-    try {
-      svc = createServiceClient();
-    } catch (err) {
-      console.error("[payments] service-role unavailable", err);
-      return { ok: false, error: "서비스가 일시적으로 불가능합니다." };
-    }
-    const { data: profile } = await svc
-      .from("profiles")
-      .select("postal_code, address, address_detail")
-      .eq("id", auth.user.id)
-      .maybeSingle();
-    myProfileAddress = profile
-      ? {
-          postalCode: profile.postal_code ?? "",
-          address: profile.address ?? "",
-          detail: profile.address_detail ?? "",
-        }
-      : null;
-  }
-  const addresses = new Set(
-    orders.map((o) => {
-      const parts = resolveOrderShippingAddress(
-        {
-          addressSource: o.address_source,
-          postalCode: o.postal_code,
-          deliveryAddress: o.delivery_address,
-          deliveryAddressDetail: o.delivery_address_detail,
-        },
-        myProfileAddress
-      );
-      return [
-        (parts.postalCode ?? "").trim(),
-        (parts.address ?? "").trim(),
-        (parts.detail ?? "").trim(),
-      ].join("|");
-    })
-  );
-  if (addresses.size > 1) {
-    return {
-      ok: false,
-      error: "배송지가 서로 다른 주문은 합배송할 수 없습니다.",
-    };
-  }
-
-  let service;
-  try {
-    service = createServiceClient();
-  } catch (err) {
-    console.error("[payments] service-role unavailable", err);
-    return { ok: false, error: "서비스가 일시적으로 불가능합니다." };
-  }
-
-  const shipmentGroupId = randomUUID();
-  const primaryOrderId = orderIds[0];
-  const nowIso = new Date().toISOString();
-
-  // 합배송 1건 = SHIPPING 결제 행 1개 (대표 주문 기준, 3,000원 고정).
-  const { error: insErr } = await service.from("payments").insert({
-    order_id: primaryOrderId,
-    payment_type: "SHIPPING",
-    amount: SHIPPING_FEE,
-    payment_method: PAYMENT_METHOD_LABEL[input.method],
-    status: "COMPLETED",
-    paid_at: nowIso,
-  });
-  if (insErr) {
-    console.error("[payments] insert shipping fee failed", insErr);
-    return { ok: false, error: "결제 기록 저장에 실패했습니다." };
-  }
-
-  // 묶음 전 주문에 shipment_group_id 부여 — 이것이 "택배비 결제 완료" 의 기준.
-  const { error: grpErr } = await service
-    .from("orders")
-    .update({ shipment_group_id: shipmentGroupId })
-    .in("id", orderIds);
-  if (grpErr) {
-    console.error("[payments] shipment_group_id update failed", grpErr);
-    return { ok: false, error: "결제 상태 갱신에 실패했습니다." };
-  }
-
-  // 회계용 — 택배비 금액은 대표 주문에만 기록 (묶음당 1건).
-  const { error: feeErr } = await service
-    .from("orders")
-    .update({ shipping_fee: SHIPPING_FEE })
-    .eq("id", primaryOrderId);
-  if (feeErr) {
-    console.error("[payments] shipping_fee update failed", feeErr);
-  }
-
-  revalidatePath("/mypage/orders");
-  for (const id of orderIds) {
-    revalidatePath(`/mypage/orders/${id}`);
-  }
-  revalidatePath("/admin/batches");
-  return { ok: true };
-}
 
 // 수령 방법 변경 — 고객이 마이페이지 주문 상세에서 매장 수령 ↔ 택배 수령을 변경한다.
 // 허용 조건: 본인 소유 + 미취소 + COMPLETED 아님 + 택배비 미결제(shipment_group_id 없음)
@@ -877,33 +533,37 @@ export async function createOrdersAction(
   };
 }
 
-// ── 토스 결제 위젯 — 신청 시 선결제 confirm 핸들러 ────────────────────────────
-//
-// 흐름:
-//   1) 클라이언트가 토스 위젯에서 결제 완료 → /apply/payment/success?orderIds=A,B&paymentKey=...&orderId=...&amount=...
-//   2) success 페이지가 이 액션 호출
-//   3) 액션이:
-//        - orderIds 가 본인 소유 + PAYMENT_PENDING + 미취소 검증
-//        - prepaid_amount 합계와 토스 amount 일치 검증 (금액 변조 차단)
-//        - 토스 /v1/payments/confirm 호출
-//        - 각 order 에 payments(PREPAYMENT) 행 + paymentKey 저장
-//        - orders 를 PAID + CARD_DELIVERY_PENDING 으로 승격
-//
-// 멱등성: 같은 (paymentKey, order_id) UNIQUE 인덱스로 중복 insert 차단.
-//
-// 실패 시 토스 측 결제는 이미 승인된 상태일 수 있으므로 운영자가 수동 대응할 수 있도록
-// 에러 메시지에 paymentKey 를 포함한다.
 
-export type ConfirmApplyPrepaymentResult =
+// ── 토스 결제 위젯 — 통합 confirm 핸들러 ─────────────────────────────────────
+//
+// 흐름 (3가지 type 공통):
+//   1) 클라이언트가 토스 위젯에서 결제 완료 → /pay/success?type=...&orderIds=...&paymentKey=...
+//   2) success 페이지가 이 액션 호출 → 토스 /v1/payments/confirm 호출
+//   3) type 별 DB 갱신:
+//        prepay     : payments(PREPAYMENT) + orders.payment_status=PAID + order_status=CARD_DELIVERY_PENDING
+//        overcharge : payments(OVERCHARGE) + orders.payment_status=OVERCHARGE_PAID
+//        shipping   : payments(SHIPPING, 대표 주문 1건) + orders.shipment_group_id 부여 + shipping_fee
+//
+// 멱등성: (toss_payment_key, order_id) UNIQUE 인덱스가 중복 insert 를 막아준다.
+//         success 페이지 새로고침/중복 호출에도 안전.
+
+export type TossPaymentType = "prepay" | "overcharge" | "shipping";
+
+export type ConfirmTossPaymentResult =
   | { ok: false; error: string }
-  | { ok: true; orderIds: string[] };
+  | { ok: true; type: TossPaymentType; orderIds: string[] };
 
-export async function confirmApplyPrepaymentAction(input: {
+export interface ConfirmTossPaymentInput {
+  type: TossPaymentType;
   orderIds: string[];
   paymentKey: string;
   tossOrderId: string;
   amount: number;
-}): Promise<ConfirmApplyPrepaymentResult> {
+}
+
+export async function confirmTossPaymentAction(
+  input: ConfirmTossPaymentInput
+): Promise<ConfirmTossPaymentResult> {
   const orderIds = Array.from(
     new Set((input.orderIds ?? []).filter(Boolean))
   );
@@ -916,6 +576,13 @@ export async function confirmApplyPrepaymentAction(input: {
   if (!Number.isFinite(input.amount) || input.amount <= 0) {
     return { ok: false, error: "결제 금액이 올바르지 않습니다." };
   }
+  if (
+    input.type !== "prepay" &&
+    input.type !== "overcharge" &&
+    input.type !== "shipping"
+  ) {
+    return { ok: false, error: "결제 유형이 올바르지 않습니다." };
+  }
 
   // 1) 인증
   const supabase = await createServerClient();
@@ -924,7 +591,7 @@ export async function confirmApplyPrepaymentAction(input: {
     return { ok: false, error: "로그인이 필요합니다." };
   }
 
-  // 2) 주문 검증 (소유자 + 상태)
+  // 2) 주문 조회 (service-role)
   let service;
   try {
     service = createServiceClient();
@@ -935,7 +602,9 @@ export async function confirmApplyPrepaymentAction(input: {
 
   const { data: orders, error: oErr } = await service
     .from("orders")
-    .select("id, user_id, prepaid_amount, payment_status, order_status, cancelled_at")
+    .select(
+      "id, user_id, prepaid_amount, overcharge_amount, payment_status, order_status, pickup_method, shipment_group_id, cancelled_at"
+    )
     .in("id", orderIds);
 
   if (oErr) {
@@ -945,6 +614,9 @@ export async function confirmApplyPrepaymentAction(input: {
   if (!orders || orders.length !== orderIds.length) {
     return { ok: false, error: "일부 주문을 찾을 수 없습니다." };
   }
+
+  // 3) type 별 사전 검증 + 기대 금액 계산
+  let expectedTotal = 0;
   for (const o of orders) {
     if (o.user_id !== auth.user.id) {
       return { ok: false, error: "본인 주문에만 결제할 수 있습니다." };
@@ -952,27 +624,57 @@ export async function confirmApplyPrepaymentAction(input: {
     if (o.cancelled_at) {
       return { ok: false, error: "취소된 주문이 포함되어 있습니다." };
     }
-    if (o.payment_status === "PAID") {
-      // 멱등 — 이미 결제된 주문이면 그대로 성공으로 리턴.
-      // (토스 동일 paymentKey 로 재호출 시에도 안전.)
-      continue;
-    }
-    if (o.payment_status !== "PENDING") {
-      return {
-        ok: false,
-        error: `현재 결제 상태(${o.payment_status})에서는 결제할 수 없습니다.`,
-      };
+
+    if (input.type === "prepay") {
+      if (o.payment_status === "PAID") continue; // 멱등 통과
+      if (o.payment_status !== "PENDING") {
+        return {
+          ok: false,
+          error: `현재 결제 상태(${o.payment_status})에서는 선결제할 수 없습니다.`,
+        };
+      }
+      expectedTotal += o.prepaid_amount ?? 0;
+    } else if (input.type === "overcharge") {
+      if (o.payment_status === "OVERCHARGE_PAID") continue; // 멱등
+      if (o.payment_status !== "OVERCHARGE_PENDING") {
+        return {
+          ok: false,
+          error: "오버차지 결제 대기 상태가 아닙니다.",
+        };
+      }
+      if (!o.overcharge_amount || o.overcharge_amount <= 0) {
+        return { ok: false, error: "결제할 오버차지 금액이 없습니다." };
+      }
+      expectedTotal += o.overcharge_amount;
+    } else {
+      // shipping
+      if (o.pickup_method !== "DELIVERY") {
+        return {
+          ok: false,
+          error: "택배 수령이 아닌 주문이 포함되어 있습니다.",
+        };
+      }
+      if (o.order_status !== "TRAINERS_ARRIVED") {
+        return {
+          ok: false,
+          error: "아직 택배비 결제 단계가 아닌 주문이 포함되어 있습니다.",
+        };
+      }
+      if (o.shipment_group_id) {
+        // 멱등 — 이미 결제된 묶음. 검증만 통과시키고 후속 insert 는 skip.
+        continue;
+      }
     }
   }
 
-  // 3) 금액 검증 — 클라이언트 변조 차단.
-  const expectedTotal = orders.reduce(
-    (sum, o) => sum + (o.prepaid_amount ?? 0),
-    0
-  );
+  if (input.type === "shipping") {
+    expectedTotal = SHIPPING_FEE;
+  }
+
+  // 금액 검증 — 클라이언트 변조 차단
   if (expectedTotal !== input.amount) {
     console.error(
-      `[toss-confirm] amount mismatch expected=${expectedTotal} got=${input.amount} orders=${orderIds.join(",")}`
+      `[toss-confirm] amount mismatch type=${input.type} expected=${expectedTotal} got=${input.amount} orders=${orderIds.join(",")}`
     );
     return {
       ok: false,
@@ -980,7 +682,7 @@ export async function confirmApplyPrepaymentAction(input: {
     };
   }
 
-  // 4) 토스 승인 호출
+  // 4) 토스 승인
   let tossResp;
   try {
     tossResp = await confirmTossPayment({
@@ -991,7 +693,7 @@ export async function confirmApplyPrepaymentAction(input: {
   } catch (err) {
     if (err instanceof TossConfirmError) {
       console.error(
-        `[toss-confirm] toss api failed code=${err.code} status=${err.status} paymentKey=${input.paymentKey}`,
+        `[toss-confirm] toss api failed type=${input.type} code=${err.code} status=${err.status} paymentKey=${input.paymentKey}`,
         err.raw
       );
       return {
@@ -1003,60 +705,108 @@ export async function confirmApplyPrepaymentAction(input: {
     return { ok: false, error: "결제 승인 중 오류가 발생했습니다." };
   }
 
-  // 5) payments insert + orders 승격 — 주문별 1 row.
-  //    UNIQUE(paymentKey, order_id) 가 중복 insert 를 막아주므로
-  //    이미 처리된 주문이 섞여 있어도 안전.
   const paidAtIso = tossResp.approvedAt ?? new Date().toISOString();
   const methodLabel = (tossResp.method as string) ?? "토스페이먼츠";
 
-  for (const o of orders) {
-    if (o.payment_status === "PAID") continue;
+  // 5) type 별 DB 갱신
+  try {
+    if (input.type === "prepay") {
+      for (const o of orders) {
+        if (o.payment_status === "PAID") continue;
+        const { error: payErr } = await service.from("payments").insert({
+          order_id: o.id,
+          payment_type: "PREPAYMENT",
+          amount: o.prepaid_amount,
+          payment_method: methodLabel,
+          toss_order_id: input.tossOrderId,
+          toss_payment_key: input.paymentKey,
+          status: "COMPLETED",
+          paid_at: paidAtIso,
+          raw_response: tossResp as unknown as object,
+        });
+        if (payErr) throw payErr;
+        const { error: updErr } = await service
+          .from("orders")
+          .update({
+            payment_status: "PAID",
+            order_status: "CARD_DELIVERY_PENDING",
+          })
+          .eq("id", o.id);
+        if (updErr) throw updErr;
+      }
+    } else if (input.type === "overcharge") {
+      for (const o of orders) {
+        if (o.payment_status === "OVERCHARGE_PAID") continue;
+        // 위 검증 루프에서 overcharge_amount > 0 보장됨.
+        const overchargeAmt = o.overcharge_amount ?? 0;
+        const { error: payErr } = await service.from("payments").insert({
+          order_id: o.id,
+          payment_type: "OVERCHARGE",
+          amount: overchargeAmt,
+          payment_method: methodLabel,
+          toss_order_id: input.tossOrderId,
+          toss_payment_key: input.paymentKey,
+          status: "COMPLETED",
+          paid_at: paidAtIso,
+          raw_response: tossResp as unknown as object,
+        });
+        if (payErr) throw payErr;
+        const { error: updErr } = await service
+          .from("orders")
+          .update({ payment_status: "OVERCHARGE_PAID" })
+          .eq("id", o.id);
+        if (updErr) throw updErr;
+      }
+    } else {
+      // shipping — 합배송: 미결제 주문들이 새 shipment_group_id 를 공유.
+      const unshippedOrderIds = orders
+        .filter((o) => !o.shipment_group_id)
+        .map((o) => o.id);
 
-    const { error: payErr } = await service.from("payments").insert({
-      order_id: o.id,
-      payment_type: "PREPAYMENT",
-      amount: o.prepaid_amount,
-      payment_method: methodLabel,
-      toss_order_id: input.tossOrderId,
-      toss_payment_key: input.paymentKey,
-      status: "COMPLETED",
-      paid_at: paidAtIso,
-      raw_response: tossResp as unknown as object,
-    });
-    if (payErr) {
-      console.error(
-        `[toss-confirm] payment insert failed order=${o.id} paymentKey=${input.paymentKey}`,
-        payErr
-      );
-      return {
-        ok: false,
-        error:
-          "결제 기록 저장에 실패했습니다. 결제는 완료되었으니 고객센터에 문의해 주세요.",
-      };
-    }
+      if (unshippedOrderIds.length > 0) {
+        const shipmentGroupId = randomUUID();
+        const primaryOrderId = unshippedOrderIds[0];
 
-    const { error: updErr } = await service
-      .from("orders")
-      .update({
-        payment_status: "PAID",
-        order_status: "CARD_DELIVERY_PENDING",
-      })
-      .eq("id", o.id);
-    if (updErr) {
-      console.error(
-        `[toss-confirm] orders update failed order=${o.id}`,
-        updErr
-      );
-      return {
-        ok: false,
-        error:
-          "주문 상태 갱신에 실패했습니다. 결제는 완료되었으니 고객센터에 문의해 주세요.",
-      };
+        const { error: payErr } = await service.from("payments").insert({
+          order_id: primaryOrderId,
+          payment_type: "SHIPPING",
+          amount: SHIPPING_FEE,
+          payment_method: methodLabel,
+          toss_order_id: input.tossOrderId,
+          toss_payment_key: input.paymentKey,
+          status: "COMPLETED",
+          paid_at: paidAtIso,
+          raw_response: tossResp as unknown as object,
+        });
+        if (payErr) throw payErr;
+
+        const { error: grpErr } = await service
+          .from("orders")
+          .update({ shipment_group_id: shipmentGroupId })
+          .in("id", unshippedOrderIds);
+        if (grpErr) throw grpErr;
+
+        const { error: feeErr } = await service
+          .from("orders")
+          .update({ shipping_fee: SHIPPING_FEE })
+          .eq("id", primaryOrderId);
+        if (feeErr) throw feeErr;
+      }
     }
+  } catch (err) {
+    console.error(
+      `[toss-confirm] db update failed type=${input.type} paymentKey=${input.paymentKey} orders=${orderIds.join(",")}`,
+      err
+    );
+    return {
+      ok: false,
+      error:
+        "결제는 완료되었으나 주문 상태 갱신에 실패했습니다. 고객센터에 문의해 주세요.",
+    };
   }
 
   console.info(
-    `[toss-confirm] paid orders=${orderIds.join(",")} paymentKey=${input.paymentKey} amount=${input.amount}`
+    `[toss-confirm] paid type=${input.type} orders=${orderIds.join(",")} paymentKey=${input.paymentKey} amount=${input.amount}`
   );
 
   revalidatePath("/mypage/orders");
@@ -1064,5 +814,8 @@ export async function confirmApplyPrepaymentAction(input: {
     revalidatePath(`/mypage/orders/${id}`);
   }
   revalidatePath("/admin/orders");
-  return { ok: true, orderIds };
+  if (input.type === "shipping") {
+    revalidatePath("/admin/batches");
+  }
+  return { ok: true, type: input.type, orderIds };
 }

@@ -1,15 +1,11 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { RadioGroup } from "@/components/ui/radio-group";
-import {
-  payShippingFeeAction,
-  type PaymentMethodChoice,
-} from "@/lib/orders/actions";
-import { SHIPPING_FEE, TOSS_PAYMENT_STUB_DESCRIPTION } from "@/constants/grading";
+import { SHIPPING_FEE } from "@/constants/grading";
 import {
   formatFullAddress,
   resolveOrderShippingAddress,
@@ -20,6 +16,8 @@ import type { Order } from "@/types";
 // 택배비 결제 — 택배 수령 주문이므로 현장결제(ONSITE)는 제외, 온라인 수단만 노출.
 // 합배송: 배송지가 같은 다른 트레이너스 도착 주문을 함께 선택하면 한 번에 결제된다.
 // 택배비는 묶음 수와 무관하게 3,000원 고정.
+type OnlineMethod = "TOSSPAY" | "EXTERNAL_PAY";
+
 export function ShippingClient({
   order,
   combinableOrders,
@@ -31,10 +29,8 @@ export function ShippingClient({
   profileAddress: ProfileAddress | null;
 }) {
   const router = useRouter();
-  const [method, setMethod] = useState<PaymentMethodChoice>("CARD");
+  const [method, setMethod] = useState<OnlineMethod>("TOSSPAY");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
 
   const toggle = (id: string) => {
     setSelectedIds((prev) => {
@@ -56,17 +52,10 @@ export function ShippingClient({
     [order.id, combinableOrders, selectedIds]
   );
 
-  const handlePayment = () => {
-    setError(null);
-    startTransition(async () => {
-      const result = await payShippingFeeAction({ orderIds, method });
-      if (!result.ok) {
-        setError(result.error);
-        return;
-      }
-      router.push(`/mypage/orders/${order.id}`);
-      router.refresh();
-    });
+  const handleNext = () => {
+    router.push(
+      `/pay?type=shipping&orderIds=${orderIds.join(",")}&method=${method}`
+    );
   };
 
   return (
@@ -124,7 +113,6 @@ export function ShippingClient({
                       type="checkbox"
                       checked={selectedIds.has(o.id)}
                       onChange={() => toggle(o.id)}
-                      disabled={isPending}
                       className="h-4 w-4"
                     />
                     <span className="font-mono">{o.id}</span>
@@ -160,42 +148,25 @@ export function ShippingClient({
         <RadioGroup
           name={`shipping-method-${order.id}`}
           value={method}
-          onChange={(v) => setMethod(v as PaymentMethodChoice)}
+          onChange={(v) => setMethod(v as OnlineMethod)}
           options={[
             {
-              value: "CARD",
-              label: "신용카드 (토스페이먼츠)",
-              description: TOSS_PAYMENT_STUB_DESCRIPTION,
+              value: "TOSSPAY",
+              label: "토스페이",
+              description: "토스 앱으로 간편하게 결제합니다.",
             },
             {
-              value: "TRANSFER",
-              label: "계좌이체 (토스페이먼츠)",
-              description: TOSS_PAYMENT_STUB_DESCRIPTION,
-            },
-            {
-              value: "EASY_PAY",
-              label: "간편결제 (토스페이먼츠)",
-              description: TOSS_PAYMENT_STUB_DESCRIPTION,
+              value: "EXTERNAL_PAY",
+              label: "외부 간편결제",
+              description:
+                "카드/계좌이체/카카오페이/네이버페이 등 토스페이먼츠 결제창에서 결제수단을 선택합니다.",
             },
           ]}
         />
       </div>
 
-      {error && (
-        <div className="mt-4 rounded-md border border-error/30 bg-error/5 p-3 text-sm text-error">
-          {error}
-        </div>
-      )}
-
-      <Button
-        className="mt-6 w-full"
-        size="lg"
-        onClick={handlePayment}
-        disabled={isPending}
-      >
-        {isPending
-          ? "결제 처리 중..."
-          : `${SHIPPING_FEE.toLocaleString()}원 결제하기`}
+      <Button className="mt-6 w-full" size="lg" onClick={handleNext}>
+        {`${SHIPPING_FEE.toLocaleString()}원 결제하기`}
       </Button>
     </div>
   );

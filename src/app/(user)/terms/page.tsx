@@ -23,7 +23,7 @@ export default function TermsPage() {
         <div>
           <h2 className="text-base font-semibold text-foreground">서비스 개요 (안내)</h2>
           <p className="mt-2 text-muted-foreground">
-            트레이너스 그레이딩은 트레이딩 카드를 해외 그레이딩사(PSA·BGS·CGC·BRG)에
+            트레이너스 그레이딩은 트레이딩 카드를 해외 그레이딩사(PSA·BGS·CGC·brg)에
             대행 의뢰하고, 슬랩 반환까지 처리하는 그레이딩 대행 서비스입니다.
           </p>
         </div>

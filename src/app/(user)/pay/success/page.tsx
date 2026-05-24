@@ -2,25 +2,22 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { buttonVariants } from "@/components/ui/button";
-import { confirmApplyPrepaymentAction } from "@/lib/orders/actions";
+import {
+  confirmTossPaymentAction,
+  type TossPaymentType,
+} from "@/lib/orders/actions";
 
 export const dynamic = "force-dynamic";
 
-// 토스 결제 성공 콜백.
-// 토스 successUrl 로 paymentKey/orderId/amount 가 query 로 전달되고,
-// 위젯 마운트 단계에서 우리가 인코딩해 둔 orderIds 도 함께 들어온다.
-//
-// 이 페이지는 서버 컴포넌트로 confirmApplyPrepaymentAction 을 호출하여
-// 결제 승인 + DB 갱신을 수행한 뒤, 성공이면 마이페이지로 redirect 한다.
-//
-// 사용자가 이 URL 을 새로고침해도 confirmApplyPrepaymentAction 은 (paymentKey, order_id)
-// UNIQUE 인덱스로 중복 처리 방어되어 있어 안전.
+// 토스 결제 성공 콜백 (3가지 type 공용).
+// successUrl 에서 우리가 인코딩한 type/orderIds + 토스가 echo 한 paymentKey/orderId/amount 수신.
 
 interface SuccessParams {
+  type?: string;
   paymentKey?: string;
-  orderId?: string; // 토스 측 orderId (우리가 발급한 tossOrderId)
+  orderId?: string; // 토스 측 orderId
   amount?: string;
-  orderIds?: string; // 우리 시스템 orderIds (콤마 구분)
+  orderIds?: string;
 }
 
 export default function PaymentSuccessPage({
@@ -47,6 +44,7 @@ async function SuccessContent({
   searchParams: Promise<SuccessParams>;
 }) {
   const sp = await searchParams;
+  const type = parseType(sp.type);
   const paymentKey = sp.paymentKey ?? "";
   const tossOrderId = sp.orderId ?? "";
   const amountNum = Number(sp.amount ?? "0");
@@ -55,7 +53,13 @@ async function SuccessContent({
     .map((s) => s.trim())
     .filter(Boolean);
 
-  if (!paymentKey || !tossOrderId || !amountNum || orderIds.length === 0) {
+  if (
+    !type ||
+    !paymentKey ||
+    !tossOrderId ||
+    !amountNum ||
+    orderIds.length === 0
+  ) {
     return (
       <ErrorState
         title="결제 정보 누락"
@@ -64,7 +68,8 @@ async function SuccessContent({
     );
   }
 
-  const result = await confirmApplyPrepaymentAction({
+  const result = await confirmTossPaymentAction({
+    type,
     orderIds,
     paymentKey,
     tossOrderId,
@@ -81,8 +86,17 @@ async function SuccessContent({
     );
   }
 
-  // 성공 — 마이페이지로 즉시 이동.
-  redirect(`/mypage/orders?paid=${result.orderIds.join(",")}`);
+  // 성공 — type 별 적절한 화면으로 이동.
+  const target =
+    type === "shipping" || result.orderIds.length > 1
+      ? `/mypage/orders?paid=${result.orderIds.join(",")}`
+      : `/mypage/orders/${result.orderIds[0]}`;
+  redirect(target);
+}
+
+function parseType(v: string | undefined): TossPaymentType | null {
+  if (v === "prepay" || v === "overcharge" || v === "shipping") return v;
+  return null;
 }
 
 function ErrorState({

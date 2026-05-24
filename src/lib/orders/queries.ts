@@ -245,6 +245,64 @@ export async function getCardsForOrdersForAdmin(
   return (data ?? []).map(mapCard);
 }
 
+/**
+ * 카드 정보 작성 자동완성용 템플릿.
+ * 영문명·세트·번호·연도 4개 필수 필드가 모두 채워진 과거 카드들에서
+ * 동일 조합을 중복 제거하여 반환한다.
+ * 신고가액은 가장 최근 입력값을 함께 제공한다.
+ */
+export interface CardTemplate {
+  englishName: string;
+  setName: string;
+  cardNumber: string;
+  year: string;
+  declaredValue?: number;
+  frontImageUrl?: string;
+}
+
+export async function getCardTemplatesForAdmin(): Promise<CardTemplate[]> {
+  const supabase = createServiceClient();
+  // 최근 갱신된 카드 우선으로 가져와 중복 제거 시 최신 신고가액·이미지가 반영되게 함.
+  const { data, error } = await supabase
+    .from("cards")
+    .select(
+      "english_name, set_name, card_number, year, declared_value, front_image_url, updated_at"
+    )
+    .not("english_name", "is", null)
+    .not("set_name", "is", null)
+    .not("card_number", "is", null)
+    .not("year", "is", null)
+    .order("updated_at", { ascending: false })
+    .limit(2000);
+
+  if (error) {
+    console.error("[orders] getCardTemplatesForAdmin failed", error);
+    return [];
+  }
+
+  const seen = new Set<string>();
+  const result: CardTemplate[] = [];
+  for (const r of data ?? []) {
+    const en = r.english_name?.trim();
+    const set = r.set_name?.trim();
+    const num = r.card_number?.trim();
+    const yr = r.year?.trim();
+    if (!en || !set || !num || !yr) continue;
+    const key = `${en.toLowerCase()}|${set.toLowerCase()}|${num.toLowerCase()}|${yr}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push({
+      englishName: en,
+      setName: set,
+      cardNumber: num,
+      year: yr,
+      declaredValue: r.declared_value ?? undefined,
+      frontImageUrl: r.front_image_url ?? undefined,
+    });
+  }
+  return result;
+}
+
 export async function getOrdersByStatusesForAdmin(
   statuses: Order["orderStatus"][]
 ): Promise<Order[]> {

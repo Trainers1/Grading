@@ -8,15 +8,15 @@ import { loadTossPayments } from "@tosspayments/tosspayments-sdk";
 interface OrderSummaryRow {
   id: string;
   label: string;
-  cardCount: number;
   amount: number;
+  meta?: string;
 }
 
 export interface TossPaymentWidgetProps {
   clientKey: string;
   /** 회원별 고정 customerKey — 토스 통계/카드 자동선택에 사용. */
   customerKey: string;
-  /** 가맹점 측 토스 주문 ID (prepay-xxxxxx 형식). */
+  /** 가맹점 측 토스 주문 ID (prepay-xxx / overcharge-xxx / shipping-xxx). */
   tossOrderId: string;
   /** 우리 시스템 주문 ID 목록 (한 결제 세션에 묶을 주문들). */
   orderIds: string[];
@@ -24,11 +24,17 @@ export interface TossPaymentWidgetProps {
   orderName: string;
   /** 결제 총액 (KRW). */
   amount: number;
+  /** confirm/fail 콜백에서 어떤 결제 유형인지 식별하기 위한 값. */
+  type: "prepay" | "overcharge" | "shipping";
   summary: {
-    orders: OrderSummaryRow[];
-    totalCards: number;
-    totalAmount: number;
+    title: string;
+    rows: OrderSummaryRow[];
+    totalLabel: string;
   };
+  /** 사용자가 선택한 결제 수단 힌트 — 위젯 진입 시 노출 영역 선택에 사용. */
+  preferredMethod?: "TOSSPAY" | "EXTERNAL_PAY";
+  /** 사용자 취소/돌아가기 시 이동할 경로 (기본 마이페이지). */
+  backHref?: string;
   customerEmail?: string;
 }
 
@@ -37,13 +43,12 @@ export interface TossPaymentWidgetProps {
 // 흐름:
 //   1) loadTossPayments(clientKey) → tossPayments 인스턴스
 //   2) tossPayments.widgets({ customerKey }) → widgets 핸들
-//   3) widgets.setAmount({ currency: "KRW", value }) → 결제 금액 세팅 (필수, 결제수단 렌더 전에)
-//   4) widgets.renderPaymentMethods({ selector, variantKey: "DEFAULT" })
-//      widgets.renderAgreement({ selector, variantKey: "AGREEMENT" })
+//   3) widgets.setAmount({ currency: "KRW", value }) → 결제 금액 세팅
+//   4) renderPaymentMethods + renderAgreement
 //   5) requestPayment({ orderId, orderName, successUrl, failUrl, ... })
-//      → 토스 결제 페이지로 리다이렉트
+//      → 토스 도메인으로 리다이렉트
 //
-// successUrl 에 우리 orderIds 를 인코딩하여, 콜백에서 어떤 주문을 PAID 처리할지 식별한다.
+// successUrl/failUrl 에 우리 type, orderIds 를 인코딩하여 콜백에서 식별.
 export function TossPaymentWidget({
   clientKey,
   customerKey,
@@ -51,7 +56,10 @@ export function TossPaymentWidget({
   orderIds,
   orderName,
   amount,
+  type,
   summary,
+  preferredMethod,
+  backHref = "/mypage/orders",
   customerEmail,
 }: TossPaymentWidgetProps) {
   const [status, setStatus] = useState<
@@ -112,12 +120,13 @@ export function TossPaymentWidget({
     try {
       const orderIdsParam = encodeURIComponent(orderIds.join(","));
       const origin = window.location.origin;
+      // type + orderIds 를 콜백 URL 에 실어 보낸다 — 토스가 그대로 echo 한다.
+      const baseQuery = `type=${type}&orderIds=${orderIdsParam}`;
       await widgetsRef.current.requestPayment({
         orderId: tossOrderId,
         orderName,
-        // success/fail 모두 동일한 orderIds 컨텍스트를 넘긴다.
-        successUrl: `${origin}/apply/payment/success?orderIds=${orderIdsParam}`,
-        failUrl: `${origin}/apply/payment/fail?orderIds=${orderIdsParam}`,
+        successUrl: `${origin}/pay/success?${baseQuery}`,
+        failUrl: `${origin}/pay/fail?${baseQuery}`,
         customerEmail,
       });
       // 정상 흐름이면 토스 도메인으로 리다이렉트되므로 이 줄 이후는 실행되지 않는다.
@@ -136,13 +145,15 @@ export function TossPaymentWidget({
     <div className="mx-auto max-w-lg px-4 py-10">
       <h1 className="text-center text-2xl font-bold">결제</h1>
       <p className="mt-2 text-center text-sm text-muted-foreground">
-        토스페이먼츠로 결제를 진행합니다.
+        {preferredMethod === "TOSSPAY"
+          ? "토스페이로 결제를 진행합니다."
+          : "토스페이먼츠 결제창에서 결제를 진행합니다."}
       </p>
 
       <div className="mt-8 rounded-xl border border-border bg-card p-6">
-        <h2 className="font-semibold">주문 요약</h2>
+        <h2 className="font-semibold">{summary.title}</h2>
         <ul className="mt-3 space-y-2 text-sm">
-          {summary.orders.map((o) => (
+          {summary.rows.map((o) => (
             <li
               key={o.id}
               className="flex items-center justify-between gap-3 border-b border-border/60 pb-2 last:border-0 last:pb-0"
@@ -152,9 +163,9 @@ export function TossPaymentWidget({
                   {o.id}
                 </p>
                 <p className="font-medium">{o.label}</p>
-                <p className="text-xs text-muted-foreground">
-                  카드 {o.cardCount}장
-                </p>
+                {o.meta && (
+                  <p className="text-xs text-muted-foreground">{o.meta}</p>
+                )}
               </div>
               <span className="font-medium">
                 {o.amount.toLocaleString()}원
@@ -164,14 +175,9 @@ export function TossPaymentWidget({
         </ul>
         <div className="mt-4 border-t border-border pt-3">
           <div className="flex justify-between text-base font-bold">
-            <span>
-              총 결제 금액
-              <span className="ml-1 text-xs font-normal text-muted-foreground">
-                (카드 {summary.totalCards}장)
-              </span>
-            </span>
+            <span>{summary.totalLabel}</span>
             <span className="text-primary">
-              {summary.totalAmount.toLocaleString()}원
+              {amount.toLocaleString()}원
             </span>
           </div>
         </div>
@@ -221,16 +227,12 @@ export function TossPaymentWidget({
         </Button>
       )}
 
-      <p className="mt-4 text-center text-xs text-muted-foreground">
-        결제 완료 후 매장 방문 또는 택배 등의 방법으로 카드를 전달해 주세요.
-      </p>
-
       <div className="mt-6 text-center">
         <Link
-          href="/mypage/orders"
+          href={backHref}
           className="text-xs text-muted-foreground hover:underline"
         >
-          나중에 결제하기 (마이페이지로)
+          나중에 결제하기
         </Link>
       </div>
     </div>

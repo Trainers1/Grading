@@ -14,7 +14,7 @@ export default function HomePage() {
             그레이딩 대행 서비스
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-lg text-primary-foreground/80">
-            PSA, BGS, CGC, BRG 등 해외 그레이딩사에 간편하게 대행 접수하세요.
+            PSA, BGS, CGC, brg 등 해외 그레이딩사에 간편하게 대행 접수하세요.
             매장 방문만으로 해외 그레이딩을 신청할 수 있습니다.
           </p>
           <Link

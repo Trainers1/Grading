@@ -12,8 +12,6 @@ import {
   createOrdersAction,
   type PaymentMethodChoice,
 } from "@/lib/orders/actions";
-const TOSS_DESCRIPTION =
-  "토스페이먼츠 결제창에서 결제를 진행합니다.";
 import type { GradingCompany, GradingService } from "@/types";
 
 // 흐름: 1) 그레이딩 옵션+매수 → 2) 수령방식 → 3) 결제수단 선택 후 신청+결제 1회로 완료.
@@ -167,12 +165,12 @@ export function ApplyForm({
       }
 
       // ONSITE 는 매장에서 결제 → 바로 마이페이지로.
-      // 온라인은 토스 결제 위젯이 있는 /apply/payment 로 이동.
+      // 온라인은 통합 결제 라우트 /pay 로 이동. 사용자가 고른 결제수단을 힌트로 전달.
       if (result.mode === "ONSITE") {
         router.push(`/mypage/orders?paid=${result.orderIds.join(",")}`);
       } else {
         router.push(
-          `/apply/payment?orderIds=${result.orderIds.join(",")}`
+          `/pay?type=prepay&orderIds=${result.orderIds.join(",")}&method=${formData.paymentMethod}`
         );
       }
     });
@@ -310,19 +308,15 @@ function PaymentStep({
                 "매장에서 카드 전달 시 직접 결제합니다. 결제 처리 즉시 카드 전달 대기 상태로 전환됩니다.",
             },
             {
-              value: "CARD",
-              label: "신용카드 (토스페이먼츠)",
-              description: TOSS_DESCRIPTION,
+              value: "TOSSPAY",
+              label: "토스페이",
+              description: "토스 앱으로 간편하게 결제합니다.",
             },
             {
-              value: "TRANSFER",
-              label: "계좌이체 (토스페이먼츠)",
-              description: TOSS_DESCRIPTION,
-            },
-            {
-              value: "EASY_PAY",
-              label: "간편결제 (토스페이먼츠)",
-              description: TOSS_DESCRIPTION,
+              value: "EXTERNAL_PAY",
+              label: "외부 간편결제",
+              description:
+                "카드/계좌이체/카카오페이/네이버페이 등 토스페이먼츠 결제창에서 결제수단을 선택합니다.",
             },
           ]}
         />

@@ -4,12 +4,14 @@ import { redirect } from "next/navigation";
 import {
   getAllOrdersForAdmin,
   getCardsForOrdersForAdmin,
+  getCardTemplatesForAdmin,
   getPaymentCountsForOrders,
 } from "@/lib/orders/queries";
 import { requireAdmin } from "@/lib/auth/require-admin";
 import type { Order } from "@/types";
 import { IntakeManagementTab } from "./_components/intake-management-tab";
 import { CardInfoEntryTab } from "./_components/card-info-entry-tab";
+import { PendingShipmentCardsTab } from "./_components/pending-shipment-cards-tab";
 import { ShipArriveTab } from "./_components/ship-arrive-tab";
 import { PickupCompleteTab } from "./_components/pickup-complete-tab";
 import { AllOrdersTab } from "./_components/all-orders-tab";
@@ -20,6 +22,7 @@ export const dynamic = "force-dynamic";
 type TabView =
   | "intake"
   | "cardinfo"
+  | "pendingship"
   | "shipping"
   | "pickup"
   | "all"
@@ -50,6 +53,7 @@ async function OrdersContent({
   const view: TabView = (() => {
     switch (params.view) {
       case "cardinfo":
+      case "pendingship":
       case "shipping":
       case "pickup":
       case "all":
@@ -108,6 +112,12 @@ async function OrdersContent({
           count={cardInfoOrders.length}
         />
         <TabLink
+          href="/admin/orders?view=pendingship"
+          active={view === "pendingship"}
+          label="출고 대기 카드"
+          count={shipOrders.length}
+        />
+        <TabLink
           href="/admin/orders?view=shipping"
           active={view === "shipping"}
           label="출고/입고"
@@ -138,6 +148,10 @@ async function OrdersContent({
 
       {view === "cardinfo" && (
         <CardInfoEntryTabSection orders={cardInfoOrders} />
+      )}
+
+      {view === "pendingship" && (
+        <PendingShipmentCardsTabSection orders={shipOrders} />
       )}
 
       {view === "shipping" && (
@@ -195,11 +209,27 @@ function TabLink({
 }
 
 async function CardInfoEntryTabSection({ orders }: { orders: Order[] }) {
+  const [cards, templates] = await Promise.all([
+    orders.length > 0
+      ? getCardsForOrdersForAdmin(orders.map((o) => o.id))
+      : Promise.resolve([]),
+    getCardTemplatesForAdmin(),
+  ]);
+  return (
+    <CardInfoEntryTab orders={orders} cards={cards} templates={templates} />
+  );
+}
+
+async function PendingShipmentCardsTabSection({
+  orders,
+}: {
+  orders: Order[];
+}) {
   const cards =
     orders.length > 0
       ? await getCardsForOrdersForAdmin(orders.map((o) => o.id))
       : [];
-  return <CardInfoEntryTab orders={orders} cards={cards} />;
+  return <PendingShipmentCardsTab orders={orders} cards={cards} />;
 }
 
 async function CancelledOrdersTabSection({

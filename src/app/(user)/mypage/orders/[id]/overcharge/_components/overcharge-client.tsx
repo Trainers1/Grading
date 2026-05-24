@@ -1,39 +1,24 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { RadioGroup } from "@/components/ui/radio-group";
-import {
-  payOrderOverchargeAction,
-  type PaymentMethodChoice,
-} from "@/lib/orders/actions";
-import { TOSS_PAYMENT_STUB_DESCRIPTION } from "@/constants/grading";
 import type { Order } from "@/types";
+
+// 오버차지는 온라인 결제만 — 매장 방문 없이 추가 결제만 받는 단계라 ONSITE 제외.
+type OnlineMethod = "TOSSPAY" | "EXTERNAL_PAY";
 
 export function OverchargeClient({ order }: { order: Order }) {
   const router = useRouter();
-  const [method, setMethod] = useState<PaymentMethodChoice>("ONSITE");
-  const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
-
+  const [method, setMethod] = useState<OnlineMethod>("TOSSPAY");
   const overchargeAmount = order.overchargeAmount ?? 0;
 
-  const handlePayment = () => {
-    setError(null);
-    startTransition(async () => {
-      const result = await payOrderOverchargeAction({
-        orderId: order.id,
-        method,
-      });
-      if (!result.ok) {
-        setError(result.error);
-        return;
-      }
-      router.push(`/mypage/orders/${order.id}`);
-      router.refresh();
-    });
+  const handleNext = () => {
+    router.push(
+      `/pay?type=overcharge&orderIds=${order.id}&method=${method}`
+    );
   };
 
   return (
@@ -78,48 +63,25 @@ export function OverchargeClient({ order }: { order: Order }) {
         <RadioGroup
           name={`overcharge-method-${order.id}`}
           value={method}
-          onChange={(v) => setMethod(v as PaymentMethodChoice)}
+          onChange={(v) => setMethod(v as OnlineMethod)}
           options={[
             {
-              value: "ONSITE",
-              label: "현장결제",
+              value: "TOSSPAY",
+              label: "토스페이",
+              description: "토스 앱으로 간편하게 결제합니다.",
+            },
+            {
+              value: "EXTERNAL_PAY",
+              label: "외부 간편결제",
               description:
-                "트레이너스 매장에서 카드 수령 시 직접 결제합니다. 결제 처리 즉시 다음 단계로 이동합니다.",
-            },
-            {
-              value: "CARD",
-              label: "신용카드 (토스페이먼츠)",
-              description: TOSS_PAYMENT_STUB_DESCRIPTION,
-            },
-            {
-              value: "TRANSFER",
-              label: "계좌이체 (토스페이먼츠)",
-              description: TOSS_PAYMENT_STUB_DESCRIPTION,
-            },
-            {
-              value: "EASY_PAY",
-              label: "간편결제 (토스페이먼츠)",
-              description: TOSS_PAYMENT_STUB_DESCRIPTION,
+                "카드/계좌이체/카카오페이/네이버페이 등 토스페이먼츠 결제창에서 결제수단을 선택합니다.",
             },
           ]}
         />
       </div>
 
-      {error && (
-        <div className="mt-4 rounded-md border border-error/30 bg-error/5 p-3 text-sm text-error">
-          {error}
-        </div>
-      )}
-
-      <Button
-        className="mt-6 w-full"
-        size="lg"
-        onClick={handlePayment}
-        disabled={isPending}
-      >
-        {isPending
-          ? "결제 처리 중..."
-          : `${overchargeAmount.toLocaleString()}원 결제하기`}
+      <Button className="mt-6 w-full" size="lg" onClick={handleNext}>
+        {`${overchargeAmount.toLocaleString()}원 결제하기`}
       </Button>
     </div>
   );

@@ -40,7 +40,7 @@ export const GRADING_COMPANIES: {
   },
   {
     value: "BRG",
-    label: "BRG",
+    label: "brg",
     description: "Break Grading",
     url: "https://break.co.kr/",
   },
@@ -159,7 +159,3 @@ export const SERVICE_LEVELS: Record<
   ],
 };
 
-// 토스페이먼츠 위젯 연동 전까지 카드/계좌이체/간편결제 옵션 공통 안내 문구.
-// Toss 위젯 도입 후 각 메서드별 실제 흐름 설명으로 교체.
-export const TOSS_PAYMENT_STUB_DESCRIPTION =
-  "토스페이먼츠 위젯 연동 전까지 임시로 즉시 결제 처리됩니다.";
