@@ -12,7 +12,8 @@ import {
   createOrdersAction,
   type PaymentMethodChoice,
 } from "@/lib/orders/actions";
-import { TOSS_PAYMENT_STUB_DESCRIPTION } from "@/constants/grading";
+const TOSS_DESCRIPTION =
+  "토스페이먼츠 결제창에서 결제를 진행합니다.";
 import type { GradingCompany, GradingService } from "@/types";
 
 // 흐름: 1) 그레이딩 옵션+매수 → 2) 수령방식 → 3) 결제수단 선택 후 신청+결제 1회로 완료.
@@ -165,7 +166,15 @@ export function ApplyForm({
         return;
       }
 
-      router.push(`/mypage/orders?paid=${result.orderIds.join(",")}`);
+      // ONSITE 는 매장에서 결제 → 바로 마이페이지로.
+      // 온라인은 토스 결제 위젯이 있는 /apply/payment 로 이동.
+      if (result.mode === "ONSITE") {
+        router.push(`/mypage/orders?paid=${result.orderIds.join(",")}`);
+      } else {
+        router.push(
+          `/apply/payment?orderIds=${result.orderIds.join(",")}`
+        );
+      }
     });
   };
 
@@ -303,17 +312,17 @@ function PaymentStep({
             {
               value: "CARD",
               label: "신용카드 (토스페이먼츠)",
-              description: TOSS_PAYMENT_STUB_DESCRIPTION,
+              description: TOSS_DESCRIPTION,
             },
             {
               value: "TRANSFER",
               label: "계좌이체 (토스페이먼츠)",
-              description: TOSS_PAYMENT_STUB_DESCRIPTION,
+              description: TOSS_DESCRIPTION,
             },
             {
               value: "EASY_PAY",
               label: "간편결제 (토스페이먼츠)",
-              description: TOSS_PAYMENT_STUB_DESCRIPTION,
+              description: TOSS_DESCRIPTION,
             },
           ]}
         />

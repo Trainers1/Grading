@@ -42,7 +42,7 @@
     "runtime": null
   },
   "build": {
-    "buildCommand": "cd \"D:/Trainers/Grading/trainers-grading\" && pnpm build 2>&1 | tail -80",
+    "buildCommand": "cd \"D:/Trainers/Grading/trainers-grading\" && pnpm build 2>&1 | tail -60",
     "testCommand": null,
     "lintCommand": "pnpm lint",
     "devCommand": "pnpm dev",
@@ -181,14 +181,14 @@
   "hotPaths": [
     {
       "path": "src\\app\\(user)\\mypage\\orders\\[id]\\_components\\order-detail-client.tsx",
-      "accessCount": 43,
-      "lastAccessed": 1779608250070,
+      "accessCount": 44,
+      "lastAccessed": 1779616410921,
       "type": "file"
     },
     {
       "path": "src\\lib\\orders\\actions.ts",
-      "accessCount": 37,
-      "lastAccessed": 1779610021217,
+      "accessCount": 43,
+      "lastAccessed": 1779616230966,
       "type": "file"
     },
     {
@@ -241,8 +241,8 @@
     },
     {
       "path": "src\\constants\\grading.ts",
-      "accessCount": 6,
-      "lastAccessed": 1779546809486,
+      "accessCount": 7,
+      "lastAccessed": 1779615831232,
       "type": "file"
     },
     {

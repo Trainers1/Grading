@@ -9,6 +9,7 @@ import {
   resolveOrderShippingAddress,
   type ProfileAddress,
 } from "@/lib/address";
+import { confirmTossPayment, TossConfirmError } from "@/lib/toss/server";
 import type {
   GradingCompany,
   PickupMethod,
@@ -570,7 +571,15 @@ export async function confirmOrderReceiptAction(input: {
 
 type CreateOrdersResult =
   | { ok: false; error: string }
-  | { ok: true; orderIds: string[] };
+  | {
+      ok: true;
+      orderIds: string[];
+      /**
+       * ONSITE : 매장 현장결제. 즉시 PAYMENT_PENDING 상태로 신청 완료 처리.
+       * TOSS   : 온라인 결제. 주문은 PENDING 으로 생성만 되고, 후속 토스 위젯 결제가 필요.
+       */
+      mode: "ONSITE" | "TOSS";
+    };
 
 export type OrderGroupSubmission = {
   gradingCompany: GradingCompany;
@@ -836,51 +845,15 @@ export async function createOrdersAction(
 
   // 5) 결제 처리
   //    - ONSITE: 매장 방문 후 직원이 별도 처리. PAYMENT_PENDING 유지 → "신청 완료" 상태.
-  //    - 그 외(CARD/TRANSFER/EASY_PAY): 즉시 PAID + CARD_DELIVERY_PENDING 으로 승격.
+  //    - 온라인(CARD/TRANSFER/EASY_PAY): 주문만 PAYMENT_PENDING 으로 생성하고 응답에 mode='TOSS'
+  //      를 실어 보낸다. 클라이언트는 /apply/payment 로 이동해 토스 결제 위젯에서 결제를 마치고,
+  //      성공 시 /apply/payment/success 의 confirmApplyPrepaymentAction 이 payments 행을 만들고
+  //      orders 를 PAID + CARD_DELIVERY_PENDING 으로 승격한다.
   const paymentLabel = PAYMENT_METHOD_LABEL[input.paymentMethod];
   const isOnsite = input.paymentMethod === "ONSITE";
 
-  if (!isOnsite) {
-    const paidAtIso = new Date().toISOString();
-    for (const orderId of createdOrderIds) {
-      const { data: ord, error: oErr } = await service
-        .from("orders")
-        .select("prepaid_amount")
-        .eq("id", orderId)
-        .maybeSingle();
-      if (oErr || !ord) {
-        await rollbackOrders(service, createdOrderIds);
-        console.error("[orders] post-create order fetch failed", oErr);
-        return { ok: false, error: "결제 처리에 실패했습니다." };
-      }
-
-      const { error: payErr } = await service.from("payments").insert({
-        order_id: orderId,
-        payment_type: "PREPAYMENT",
-        amount: ord.prepaid_amount,
-        payment_method: paymentLabel,
-        status: "COMPLETED",
-        paid_at: paidAtIso,
-      });
-      if (payErr) {
-        await rollbackOrders(service, createdOrderIds);
-        console.error("[orders] payment insert failed", payErr);
-        return { ok: false, error: "결제 기록 저장에 실패했습니다." };
-      }
-
-      const { error: updErr } = await service
-        .from("orders")
-        .update({
-          payment_status: "PAID",
-          order_status: "CARD_DELIVERY_PENDING",
-        })
-        .eq("id", orderId);
-      if (updErr) {
-        await rollbackOrders(service, createdOrderIds);
-        console.error("[orders] payment status update failed", updErr);
-        return { ok: false, error: "결제 상태 갱신에 실패했습니다." };
-      }
-    }
+  if (isOnsite) {
+    // 현장결제는 매장에서 직원이 별도 처리. 별도 payments 행은 만들지 않는다.
   }
 
   // 작업자 추적용 로깅 (PII 최소화)
@@ -892,10 +865,204 @@ export async function createOrdersAction(
     0
   );
   console.info(
-    `[orders] ${isOnsite ? "created (onsite-pending)" : "created+paid"} ids=${createdOrderIds.join(",")} user=${maskedEmail} orders=${createdOrderIds.length} cards=${totalCards} method=${paymentLabel}`
+    `[orders] ${isOnsite ? "created (onsite-pending)" : "created (toss-pending)"} ids=${createdOrderIds.join(",")} user=${maskedEmail} orders=${createdOrderIds.length} cards=${totalCards} method=${paymentLabel}`
   );
 
   revalidatePath("/mypage/orders");
   revalidatePath("/admin/orders");
-  return { ok: true, orderIds: createdOrderIds };
+  return {
+    ok: true,
+    orderIds: createdOrderIds,
+    mode: isOnsite ? "ONSITE" : "TOSS",
+  };
+}
+
+// ── 토스 결제 위젯 — 신청 시 선결제 confirm 핸들러 ────────────────────────────
+//
+// 흐름:
+//   1) 클라이언트가 토스 위젯에서 결제 완료 → /apply/payment/success?orderIds=A,B&paymentKey=...&orderId=...&amount=...
+//   2) success 페이지가 이 액션 호출
+//   3) 액션이:
+//        - orderIds 가 본인 소유 + PAYMENT_PENDING + 미취소 검증
+//        - prepaid_amount 합계와 토스 amount 일치 검증 (금액 변조 차단)
+//        - 토스 /v1/payments/confirm 호출
+//        - 각 order 에 payments(PREPAYMENT) 행 + paymentKey 저장
+//        - orders 를 PAID + CARD_DELIVERY_PENDING 으로 승격
+//
+// 멱등성: 같은 (paymentKey, order_id) UNIQUE 인덱스로 중복 insert 차단.
+//
+// 실패 시 토스 측 결제는 이미 승인된 상태일 수 있으므로 운영자가 수동 대응할 수 있도록
+// 에러 메시지에 paymentKey 를 포함한다.
+
+export type ConfirmApplyPrepaymentResult =
+  | { ok: false; error: string }
+  | { ok: true; orderIds: string[] };
+
+export async function confirmApplyPrepaymentAction(input: {
+  orderIds: string[];
+  paymentKey: string;
+  tossOrderId: string;
+  amount: number;
+}): Promise<ConfirmApplyPrepaymentResult> {
+  const orderIds = Array.from(
+    new Set((input.orderIds ?? []).filter(Boolean))
+  );
+  if (orderIds.length === 0) {
+    return { ok: false, error: "주문 정보가 누락되었습니다." };
+  }
+  if (!input.paymentKey || !input.tossOrderId) {
+    return { ok: false, error: "결제 정보가 누락되었습니다." };
+  }
+  if (!Number.isFinite(input.amount) || input.amount <= 0) {
+    return { ok: false, error: "결제 금액이 올바르지 않습니다." };
+  }
+
+  // 1) 인증
+  const supabase = await createServerClient();
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) {
+    return { ok: false, error: "로그인이 필요합니다." };
+  }
+
+  // 2) 주문 검증 (소유자 + 상태)
+  let service;
+  try {
+    service = createServiceClient();
+  } catch (err) {
+    console.error("[toss-confirm] service-role unavailable", err);
+    return { ok: false, error: "서비스가 일시적으로 불가능합니다." };
+  }
+
+  const { data: orders, error: oErr } = await service
+    .from("orders")
+    .select("id, user_id, prepaid_amount, payment_status, order_status, cancelled_at")
+    .in("id", orderIds);
+
+  if (oErr) {
+    console.error("[toss-confirm] order fetch failed", oErr);
+    return { ok: false, error: "주문 조회 중 오류가 발생했습니다." };
+  }
+  if (!orders || orders.length !== orderIds.length) {
+    return { ok: false, error: "일부 주문을 찾을 수 없습니다." };
+  }
+  for (const o of orders) {
+    if (o.user_id !== auth.user.id) {
+      return { ok: false, error: "본인 주문에만 결제할 수 있습니다." };
+    }
+    if (o.cancelled_at) {
+      return { ok: false, error: "취소된 주문이 포함되어 있습니다." };
+    }
+    if (o.payment_status === "PAID") {
+      // 멱등 — 이미 결제된 주문이면 그대로 성공으로 리턴.
+      // (토스 동일 paymentKey 로 재호출 시에도 안전.)
+      continue;
+    }
+    if (o.payment_status !== "PENDING") {
+      return {
+        ok: false,
+        error: `현재 결제 상태(${o.payment_status})에서는 결제할 수 없습니다.`,
+      };
+    }
+  }
+
+  // 3) 금액 검증 — 클라이언트 변조 차단.
+  const expectedTotal = orders.reduce(
+    (sum, o) => sum + (o.prepaid_amount ?? 0),
+    0
+  );
+  if (expectedTotal !== input.amount) {
+    console.error(
+      `[toss-confirm] amount mismatch expected=${expectedTotal} got=${input.amount} orders=${orderIds.join(",")}`
+    );
+    return {
+      ok: false,
+      error: "결제 금액이 주문 금액과 일치하지 않습니다.",
+    };
+  }
+
+  // 4) 토스 승인 호출
+  let tossResp;
+  try {
+    tossResp = await confirmTossPayment({
+      paymentKey: input.paymentKey,
+      orderId: input.tossOrderId,
+      amount: input.amount,
+    });
+  } catch (err) {
+    if (err instanceof TossConfirmError) {
+      console.error(
+        `[toss-confirm] toss api failed code=${err.code} status=${err.status} paymentKey=${input.paymentKey}`,
+        err.raw
+      );
+      return {
+        ok: false,
+        error: `결제 승인에 실패했습니다. (${err.code}) ${err.message}`,
+      };
+    }
+    console.error("[toss-confirm] toss api unexpected error", err);
+    return { ok: false, error: "결제 승인 중 오류가 발생했습니다." };
+  }
+
+  // 5) payments insert + orders 승격 — 주문별 1 row.
+  //    UNIQUE(paymentKey, order_id) 가 중복 insert 를 막아주므로
+  //    이미 처리된 주문이 섞여 있어도 안전.
+  const paidAtIso = tossResp.approvedAt ?? new Date().toISOString();
+  const methodLabel = (tossResp.method as string) ?? "토스페이먼츠";
+
+  for (const o of orders) {
+    if (o.payment_status === "PAID") continue;
+
+    const { error: payErr } = await service.from("payments").insert({
+      order_id: o.id,
+      payment_type: "PREPAYMENT",
+      amount: o.prepaid_amount,
+      payment_method: methodLabel,
+      toss_order_id: input.tossOrderId,
+      toss_payment_key: input.paymentKey,
+      status: "COMPLETED",
+      paid_at: paidAtIso,
+      raw_response: tossResp as unknown as object,
+    });
+    if (payErr) {
+      console.error(
+        `[toss-confirm] payment insert failed order=${o.id} paymentKey=${input.paymentKey}`,
+        payErr
+      );
+      return {
+        ok: false,
+        error:
+          "결제 기록 저장에 실패했습니다. 결제는 완료되었으니 고객센터에 문의해 주세요.",
+      };
+    }
+
+    const { error: updErr } = await service
+      .from("orders")
+      .update({
+        payment_status: "PAID",
+        order_status: "CARD_DELIVERY_PENDING",
+      })
+      .eq("id", o.id);
+    if (updErr) {
+      console.error(
+        `[toss-confirm] orders update failed order=${o.id}`,
+        updErr
+      );
+      return {
+        ok: false,
+        error:
+          "주문 상태 갱신에 실패했습니다. 결제는 완료되었으니 고객센터에 문의해 주세요.",
+      };
+    }
+  }
+
+  console.info(
+    `[toss-confirm] paid orders=${orderIds.join(",")} paymentKey=${input.paymentKey} amount=${input.amount}`
+  );
+
+  revalidatePath("/mypage/orders");
+  for (const id of orderIds) {
+    revalidatePath(`/mypage/orders/${id}`);
+  }
+  revalidatePath("/admin/orders");
+  return { ok: true, orderIds };
 }

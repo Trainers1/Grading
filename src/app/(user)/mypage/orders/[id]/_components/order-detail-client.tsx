@@ -404,7 +404,7 @@ export function OrderDetailClient({
               </p>
             </div>
             <Link
-              href={`/apply/payment?orderId=${order.id}`}
+              href={`/apply/payment?orderIds=${order.id}`}
               className={buttonVariants({ size: "sm" })}
             >
               결제하기
