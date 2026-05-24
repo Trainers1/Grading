@@ -1,5 +1,20 @@
 # PWA Push 디스패치 — pg_cron 폴백 활성화 절차
 
+## 현재 상태 (2026-05-24)
+**Vercel Hobby 한도 위반으로 `vercel.json`의 `crons` 배열을 임시로 비워둔 상태.**
+배포 통과를 위해 모든 cron이 비활성화되어 있으며, push 디스패치 / 주문 자동 처리가 작동하지 않음.
+테스트 종료 후 ① Vercel Pro 업그레이드로 원복하거나 ② 아래 pg_cron 폴백으로 전환할 것.
+
+### 비활성화된 원본 스케줄 (복원용)
+```json
+"crons": [
+  { "path": "/api/push/dispatch",                  "schedule": "*/5 * * * *" },
+  { "path": "/api/orders/auto-promote",            "schedule": "0 * * * *"  },
+  { "path": "/api/orders/auto-cancel-unpaid",      "schedule": "15 * * * *" },
+  { "path": "/api/orders/auto-complete-delivered", "schedule": "45 * * * *" }
+]
+```
+
 ## 활성화 조건
 Vercel Pro 플랜 미체결 또는 Vercel Cron 신뢰성 이슈 발생 시 본 절차로 Supabase pg_cron 활성화.
 

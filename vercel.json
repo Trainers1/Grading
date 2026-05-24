@@ -1,21 +1,4 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "crons": [
-    {
-      "path": "/api/push/dispatch",
-      "schedule": "*/5 * * * *"
-    },
-    {
-      "path": "/api/orders/auto-promote",
-      "schedule": "0 * * * *"
-    },
-    {
-      "path": "/api/orders/auto-cancel-unpaid",
-      "schedule": "15 * * * *"
-    },
-    {
-      "path": "/api/orders/auto-complete-delivered",
-      "schedule": "45 * * * *"
-    }
-  ]
+  "crons": []
 }
