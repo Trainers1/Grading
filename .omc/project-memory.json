@@ -42,7 +42,7 @@
     "runtime": null
   },
   "build": {
-    "buildCommand": "pnpm build 2>&1 | tail -15",
+    "buildCommand": "pnpm build 2>&1 | tail -40",
     "testCommand": null,
     "lintCommand": "pnpm lint",
     "devCommand": "pnpm dev",
@@ -205,6 +205,18 @@
       "type": "file"
     },
     {
+      "path": "src\\components\\admin\\admin-sidebar.tsx",
+      "accessCount": 5,
+      "lastAccessed": 1779637937608,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\layout.tsx",
+      "accessCount": 4,
+      "lastAccessed": 1779637948294,
+      "type": "file"
+    },
+    {
       "path": "src\\constants\\grading.ts",
       "accessCount": 3,
       "lastAccessed": 1779634885676,
@@ -235,12 +247,6 @@
       "type": "file"
     },
     {
-      "path": "src\\app\\layout.tsx",
-      "accessCount": 2,
-      "lastAccessed": 1779634900148,
-      "type": "file"
-    },
-    {
       "path": "src\\app\\(user)\\terms\\page.tsx",
       "accessCount": 2,
       "lastAccessed": 1779634905286,
@@ -250,6 +256,60 @@
       "path": "src\\app\\(user)\\page.tsx",
       "accessCount": 2,
       "lastAccessed": 1779634910981,
+      "type": "file"
+    },
+    {
+      "path": "supabase\\migrations\\001_initial_schema.sql",
+      "accessCount": 2,
+      "lastAccessed": 1779636271706,
+      "type": "file"
+    },
+    {
+      "path": "supabase\\migrations\\002_redesign.sql",
+      "accessCount": 2,
+      "lastAccessed": 1779636272665,
+      "type": "file"
+    },
+    {
+      "path": "supabase\\migrations",
+      "accessCount": 2,
+      "lastAccessed": 1779636281873,
+      "type": "directory"
+    },
+    {
+      "path": "supabase\\migrations\\003_pwa_push.sql",
+      "accessCount": 2,
+      "lastAccessed": 1779636299198,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\user\\user-footer.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1779637232197,
+      "type": "file"
+    },
+    {
+      "path": "src\\lib\\auth\\require-admin.ts",
+      "accessCount": 2,
+      "lastAccessed": 1779637807878,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\manifest.ts",
+      "accessCount": 2,
+      "lastAccessed": 1779637822379,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\user\\user-header.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1779637888939,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\admin\\admin-shell.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1779637917308,
       "type": "file"
     },
     {
@@ -293,6 +353,54 @@
       "accessCount": 1,
       "lastAccessed": 1779635765263,
       "type": "directory"
+    },
+    {
+      "path": "supabase\\migrations\\014_shipment_group.sql",
+      "accessCount": 1,
+      "lastAccessed": 1779636259356,
+      "type": "file"
+    },
+    {
+      "path": "supabase\\migrations\\016_card_images_bucket.sql",
+      "accessCount": 1,
+      "lastAccessed": 1779636260207,
+      "type": "file"
+    },
+    {
+      "path": "supabase\\migrations\\020_toss_multi_order_payment.sql",
+      "accessCount": 1,
+      "lastAccessed": 1779636260484,
+      "type": "file"
+    },
+    {
+      "path": "supabase\\scripts\\reset_orders_and_cards.sql",
+      "accessCount": 1,
+      "lastAccessed": 1779636367214,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\globals.css",
+      "accessCount": 1,
+      "lastAccessed": 1779637217594,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\(admin)\\admin\\layout.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1779637232892,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\user\\mobile-menu.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1779637866398,
+      "type": "file"
+    },
+    {
+      "path": "C:\\Users\\user\\AppData\\Local\\Temp\\claude\\D--Trainers-Grading-trainers-grading\\6bcb3258-2364-41d9-bb3b-544183f95e61\\tasks\\bqfkzu1h4.output",
+      "accessCount": 1,
+      "lastAccessed": 1779637982512,
+      "type": "file"
     }
   ],
   "userDirectives": []

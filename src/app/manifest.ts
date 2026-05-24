@@ -38,5 +38,35 @@ export default function manifest(): MetadataRoute.Manifest {
         purpose: "maskable",
       },
     ],
+    // PWA standalone 모드에서 주소창 접근이 어려운 어드민 진입용 단축키.
+    // Android Chrome / Windows Edge / Samsung Internet 에서 앱 아이콘 길게
+    // 누르면 OS 메뉴에 노출된다.
+    shortcuts: [
+      {
+        name: "관리자 로그인",
+        short_name: "관리자",
+        description: "트레이너스 어드민 콘솔",
+        url: "/admin/login",
+        icons: [
+          {
+            src: "/icons/icon-192.png",
+            sizes: "192x192",
+            type: "image/png",
+          },
+        ],
+      },
+      {
+        name: "신청내역",
+        short_name: "신청내역",
+        url: "/mypage/orders",
+        icons: [
+          {
+            src: "/icons/icon-192.png",
+            sizes: "192x192",
+            type: "image/png",
+          },
+        ],
+      },
+    ],
   };
 }
