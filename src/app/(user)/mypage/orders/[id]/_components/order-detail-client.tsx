@@ -544,17 +544,17 @@ export function OrderDetailClient({
               >
                 <div className="flex flex-col gap-4 sm:flex-row">
                   {photos.length > 0 ? (
-                    <div className="flex shrink-0 gap-2">
+                    <div className="flex flex-wrap gap-2 sm:shrink-0 sm:flex-nowrap">
                       {photos.map((p) => (
                         <div
                           key={p.label}
-                          className="flex w-24 flex-col items-center"
+                          className="flex w-20 flex-col items-center sm:w-24"
                         >
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={p.url}
                             alt={`카드 #${cardIndex + 1} ${p.label}`}
-                            className="h-32 w-24 rounded-md border border-border object-cover"
+                            className="h-28 w-20 rounded-md border border-border object-cover sm:h-32 sm:w-24"
                           />
                           <span className="mt-1 text-[10px] text-muted-foreground">
                             {p.label}
@@ -563,7 +563,7 @@ export function OrderDetailClient({
                       ))}
                     </div>
                   ) : (
-                    <div className="flex h-32 w-24 shrink-0 items-center justify-center rounded-md border border-dashed border-border text-[10px] text-muted-foreground">
+                    <div className="flex h-28 w-20 shrink-0 items-center justify-center rounded-md border border-dashed border-border text-[10px] text-muted-foreground sm:h-32 sm:w-24">
                       사진 없음
                     </div>
                   )}

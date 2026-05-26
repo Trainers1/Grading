@@ -115,30 +115,32 @@ export function MyOrdersList({ orders }: { orders: Order[] }) {
         </div>
       </div>
 
-      <div className="mt-6 flex gap-2 border-b border-border">
-        {TABS.map((t) => {
-          const isActive = tab === t.key;
-          const isAccent = t.accent === "error";
-          return (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={cn(
-                "px-4 py-2 text-sm font-medium transition-colors cursor-pointer",
-                isAccent && "ml-auto",
-                isAccent
-                  ? isActive
-                    ? "border-b-2 border-error text-error"
-                    : "text-error/80 hover:text-error"
-                  : isActive
-                  ? "border-b-2 border-primary text-primary"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {t.label}
-            </button>
-          );
-        })}
+      <div className="mt-6 -mx-4 overflow-x-auto border-b border-border px-4 sm:mx-0 sm:px-0">
+        <div className="flex min-w-max gap-2 sm:min-w-0">
+          {TABS.map((t) => {
+            const isActive = tab === t.key;
+            const isAccent = t.accent === "error";
+            return (
+              <button
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                className={cn(
+                  "whitespace-nowrap px-3 py-2 text-sm font-medium transition-colors cursor-pointer sm:px-4",
+                  isAccent && "sm:ml-auto",
+                  isAccent
+                    ? isActive
+                      ? "border-b-2 border-error text-error"
+                      : "text-error/80 hover:text-error"
+                    : isActive
+                    ? "border-b-2 border-primary text-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div className="mt-4 space-y-3">
