@@ -82,44 +82,25 @@ export const PAYMENT_STATUS_LABELS: Record<string, string> = {
 };
 
 /**
- * 등급회사별 그레이드 프리셋 (등급 입력 버튼 라벨용).
- * value: cards.grade_result 에 저장되는 문자열.
- * label: 버튼에 표시되는 라벨 (등급 + 설명).
- * 마지막 항목은 항상 "직접 입력" 으로 운영자가 자유 입력 가능.
+ * 등급회사별 인증번호 조회 URL 빌더 — 사용자가 일련번호로 등급사 사이트에서
+ * 직접 조회할 수 있도록 새 탭으로 열어 준다.
  */
-export const GRADE_PRESETS: Record<
-  GradingCompany,
-  { value: string; label: string }[]
-> = {
-  PSA: [
-    { value: "PSA 10", label: "PSA 10 (Gem Mint)" },
-    { value: "PSA 9", label: "PSA 9 (Mint)" },
-    { value: "PSA 8", label: "PSA 8 (Near Mint-Mint)" },
-    { value: "PSA 7", label: "PSA 7 (Near Mint)" },
-    { value: "PSA 6", label: "PSA 6 (Excellent-Near Mint)" },
-    { value: "PSA 5", label: "PSA 5 (Excellent)" },
-  ],
-  BGS: [
-    { value: "BGS 10 Pristine", label: "BGS 10 (Pristine)" },
-    { value: "BGS 9.5", label: "BGS 9.5 (Gem Mint)" },
-    { value: "BGS 9", label: "BGS 9 (Mint)" },
-    { value: "BGS 8.5", label: "BGS 8.5 (Near Mint-Mint+)" },
-    { value: "BGS 8", label: "BGS 8 (Near Mint-Mint)" },
-  ],
-  CGC: [
-    { value: "CGC 10 Pristine", label: "CGC 10 (Pristine)" },
-    { value: "CGC 9.5", label: "CGC 9.5 (Gem Mint)" },
-    { value: "CGC 9", label: "CGC 9 (Mint)" },
-    { value: "CGC 8.5", label: "CGC 8.5 (Near Mint-Mint+)" },
-    { value: "CGC 8", label: "CGC 8 (Near Mint-Mint)" },
-  ],
-  BRG: [
-    { value: "BRG 10", label: "BRG 10 (Gem Mint)" },
-    { value: "BRG 9", label: "BRG 9 (Mint)" },
-    { value: "BRG 8", label: "BRG 8 (Near Mint-Mint)" },
-    { value: "BRG 7", label: "BRG 7 (Near Mint)" },
-  ],
-};
+export function getCertLookupUrl(
+  company: GradingCompany,
+  serialNumber: string
+): string {
+  const s = encodeURIComponent(serialNumber.trim());
+  switch (company) {
+    case "PSA":
+      return `https://www.psacard.com/cert/${s}/psa`;
+    case "BRG":
+      return `https://break.co.kr/certification/${s}`;
+    case "BGS":
+      return `https://www.beckett.com/grading/card-lookup?item_type=BGS&item_id=${s}`;
+    case "CGC":
+      return `https://www.cgccards.com/certlookup/${s}/`;
+  }
+}
 
 /** 사진 업로드 제한 */
 export const PHOTO_UPLOAD = {

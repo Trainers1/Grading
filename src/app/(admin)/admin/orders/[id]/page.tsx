@@ -249,7 +249,7 @@ export default async function OrderDetailPage({
                     <th className="px-5 py-3">번호</th>
                     <th className="px-5 py-3">연도</th>
                     <th className="px-5 py-3">신고가액</th>
-                    <th className="px-5 py-3">등급 결과</th>
+                    <th className="px-5 py-3">일련번호</th>
                     <th className="px-5 py-3 text-right">관리</th>
                   </tr>
                 </thead>

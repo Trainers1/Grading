@@ -149,9 +149,9 @@ export function CardEditor({
         />
       </td>
       <td className="px-5 py-3">
-        {card.gradeResult ? (
-          <span className="rounded-md bg-success/10 px-2 py-1 font-medium text-success">
-            {card.gradeResult}
+        {card.serialNumber ? (
+          <span className="rounded-md bg-success/10 px-2 py-1 font-mono text-xs text-success">
+            {card.serialNumber}
           </span>
         ) : (
           <span className="text-muted-foreground">대기 중</span>
@@ -193,12 +193,12 @@ export function CardEditorMobile({
         <span className="font-mono text-xs font-medium text-muted-foreground">
           카드 #{index + 1}
         </span>
-        {card.gradeResult ? (
-          <span className="rounded-md bg-success/10 px-2 py-0.5 text-xs font-medium text-success">
-            {card.gradeResult}
+        {card.serialNumber ? (
+          <span className="rounded-md bg-success/10 px-2 py-0.5 font-mono text-xs text-success">
+            {card.serialNumber}
           </span>
         ) : (
-          <span className="text-xs text-muted-foreground">등급 대기 중</span>
+          <span className="text-xs text-muted-foreground">일련번호 대기</span>
         )}
       </div>
 

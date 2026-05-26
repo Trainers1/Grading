@@ -264,15 +264,16 @@ export async function receiveOrderCardsAction(params: {
   return { ok: true };
 }
 
-// ── 등급 결과 일괄 업로드 ──────────────────────────────────────────────────
-// grading 페이지의 "업로드" 버튼에서 호출. 각 entry 는 cardId + grade + serial.
-// grade 와 serial 둘 다 채워진 entry 만 적용 — 둘 중 하나라도 빈 카드는 무시.
-// 한 주문의 모든 카드가 grade+serial 을 모두 가지면 'DISTRIBUTOR_SHIPPED' →
+// ── 일련번호 일괄 업로드 ──────────────────────────────────────────────────
+// grading 페이지의 "업로드" 버튼에서 호출. 각 entry 는 cardId + serial.
+// 일련번호가 채워진 entry 만 적용 — 빈 카드는 무시.
+// 한 주문의 모든 카드가 serial 을 가지면 'DISTRIBUTOR_SHIPPED' →
 // 'GRADE_CONFIRMED' 자동 전이 (existing log/푸시 트리거 작동).
+// 등급 결과(grade_result) 는 운영자가 입력하지 않고, 사용자가 그레이딩사 사이트에서
+// 일련번호로 직접 조회한다.
 
 export type BulkUpsertGradeEntry = {
   cardId: string;
-  gradeResult: string;
   serialNumber: string;
 };
 
@@ -293,23 +294,19 @@ export async function bulkUpsertGradeResultsAction(params: {
     return { ok: false, error: "관리자 권한이 필요합니다." };
   }
   if (!canInputData(admin.adminRole)) {
-    return { ok: false, error: "매장 계정은 등급을 입력할 수 없습니다." };
+    return { ok: false, error: "매장 계정은 일련번호를 입력할 수 없습니다." };
   }
 
   const allEntries = params.entries ?? [];
-  // grade + serial 모두 채워진 항목만 적용
+  // 일련번호가 채워진 항목만 적용
   const applied: BulkUpsertGradeEntry[] = [];
   for (const e of allEntries) {
-    const g = e.gradeResult?.trim() ?? "";
     const s = e.serialNumber?.trim() ?? "";
-    if (!e.cardId || !g || !s) continue;
-    if (g.length > 50) {
-      return { ok: false, error: `등급 결과가 너무 깁니다 (50자 이내). cardId=${e.cardId}` };
-    }
+    if (!e.cardId || !s) continue;
     if (s.length > 80) {
       return { ok: false, error: `일련번호가 너무 깁니다 (80자 이내). cardId=${e.cardId}` };
     }
-    applied.push({ cardId: e.cardId, gradeResult: g, serialNumber: s });
+    applied.push({ cardId: e.cardId, serialNumber: s });
   }
 
   const skippedCount = allEntries.length - applied.length;
@@ -317,7 +314,7 @@ export async function bulkUpsertGradeResultsAction(params: {
   if (applied.length === 0) {
     return {
       ok: false,
-      error: "등급과 일련번호가 모두 입력된 항목이 없습니다.",
+      error: "일련번호가 입력된 항목이 없습니다.",
     };
   }
 
@@ -329,7 +326,6 @@ export async function bulkUpsertGradeResultsAction(params: {
     const { data, error } = await service
       .from("cards")
       .update({
-        grade_result: entry.gradeResult,
         serial_number: entry.serialNumber,
       })
       .eq("id", entry.cardId)
@@ -337,7 +333,7 @@ export async function bulkUpsertGradeResultsAction(params: {
       .maybeSingle();
 
     if (error || !data) {
-      console.error("[cards] bulk upsert grade failed", entry.cardId, error);
+      console.error("[cards] bulk upsert serial failed", entry.cardId, error);
       return {
         ok: false,
         error: "일부 카드 저장에 실패했습니다. 다시 시도해 주세요.",
@@ -346,12 +342,12 @@ export async function bulkUpsertGradeResultsAction(params: {
     affectedOrderIds.add(data.order_id);
   }
 
-  // 영향받은 주문 단위로 자동 승격 평가
+  // 영향받은 주문 단위로 자동 승격 평가 — 일련번호 기준
   const promotedOrderIds: string[] = [];
   for (const orderId of affectedOrderIds) {
     const { data: siblings, error: sErr } = await service
       .from("cards")
-      .select("grade_result, serial_number")
+      .select("serial_number")
       .eq("order_id", orderId);
 
     if (sErr || !siblings) {
@@ -362,8 +358,6 @@ export async function bulkUpsertGradeResultsAction(params: {
       siblings.length > 0 &&
       siblings.every(
         (c) =>
-          !!c.grade_result &&
-          c.grade_result.trim().length > 0 &&
           !!c.serial_number &&
           c.serial_number.trim().length > 0
       );
@@ -403,98 +397,6 @@ export async function bulkUpsertGradeResultsAction(params: {
     skippedCount,
     promotedOrderIds,
   };
-}
-
-// ── 카드 등급 결과 입력 (단건) ─────────────────────────────────────────────
-// 레거시 단건 업데이트 액션. grading 페이지는 더 이상 사용하지 않음 (bulkUpsertGradeResultsAction 대체).
-// 단건 호출이 필요한 다른 경로 보존을 위해 유지.
-// 부수 효과: 같은 주문의 모든 카드에 grade_result + serial_number 가 채워지고
-//          현재 주문 상태가 'DISTRIBUTOR_SHIPPED' 이면 자동으로 'GRADE_CONFIRMED' 로 전이.
-
-export async function updateCardGradeAction(params: {
-  cardId: string;
-  gradeResult: string;
-}): Promise<AdminActionResult> {
-  const admin = await requireAdmin();
-  if (!admin) {
-    return { ok: false, error: "관리자 권한이 필요합니다." };
-  }
-  if (!canInputData(admin.adminRole)) {
-    return { ok: false, error: "매장 계정은 등급을 입력할 수 없습니다." };
-  }
-
-  const grade = params.gradeResult.trim();
-  if (!grade) {
-    return { ok: false, error: "등급 결과를 입력해 주세요." };
-  }
-  if (grade.length > 50) {
-    return { ok: false, error: "등급 결과가 너무 깁니다." };
-  }
-
-  const service = createServiceClient();
-  const { data: updated, error } = await service
-    .from("cards")
-    .update({ grade_result: grade })
-    .eq("id", params.cardId)
-    .select("order_id")
-    .maybeSingle();
-
-  if (error || !updated) {
-    console.error("[cards] grade update failed", error);
-    return { ok: false, error: "등급 결과 저장에 실패했습니다." };
-  }
-
-  // 같은 주문의 카드 전체가 등급+일련번호 입력 완료되었는지 확인
-  const orderId = updated.order_id;
-  const { data: siblings, error: sErr } = await service
-    .from("cards")
-    .select("grade_result, serial_number")
-    .eq("order_id", orderId);
-
-  if (sErr) {
-    console.warn("[cards] sibling fetch failed (no auto-promote)", sErr);
-  } else if (
-    siblings &&
-    siblings.length > 0 &&
-    siblings.every(
-      (c) =>
-        c.grade_result &&
-        c.grade_result.trim().length > 0 &&
-        c.serial_number &&
-        c.serial_number.trim().length > 0
-    )
-  ) {
-    const { data: order, error: oErr } = await service
-      .from("orders")
-      .select("order_status")
-      .eq("id", orderId)
-      .maybeSingle();
-
-    if (oErr) {
-      console.warn("[cards] order lookup failed (no auto-promote)", oErr);
-    } else if (order?.order_status === "DISTRIBUTOR_SHIPPED") {
-      const { error: pErr } = await service
-        .from("orders")
-        .update({ order_status: "GRADE_CONFIRMED" })
-        .eq("id", orderId);
-      if (pErr) {
-        console.warn("[cards] auto-promote to GRADE_CONFIRMED failed", pErr);
-      } else {
-        // 트리거로 생성된 status log 의 changed_by 보강
-        await service
-          .from("order_status_logs")
-          .update({ changed_by: admin.adminId })
-          .eq("order_id", orderId)
-          .eq("new_status", "GRADE_CONFIRMED")
-          .is("changed_by", null);
-        revalidatePath("/admin/orders");
-        revalidatePath(`/admin/orders/${orderId}`);
-      }
-    }
-  }
-
-  revalidatePath("/admin/grading");
-  return { ok: true };
 }
 
 // ── 주문 취소 ──────────────────────────────────────────────────────────────
@@ -1197,15 +1099,15 @@ export async function clearCardGradeAction(params: {
 
   const orderId = cleared.order_id;
 
-  // 같은 주문의 나머지 카드 중 grade_result 가 NULL/빈값인 게 하나라도 있는지 확인
+  // 같은 주문의 나머지 카드 중 serial_number 가 NULL/빈값인 게 하나라도 있는지 확인
   const { data: siblings, error: sErr } = await service
     .from("cards")
-    .select("grade_result")
+    .select("serial_number")
     .eq("order_id", orderId);
 
   if (!sErr && siblings) {
     const hasUngraded = siblings.some(
-      (c) => !c.grade_result || c.grade_result.trim().length === 0
+      (c) => !c.serial_number || c.serial_number.trim().length === 0
     );
 
     if (hasUngraded) {
@@ -1228,7 +1130,7 @@ export async function clearCardGradeAction(params: {
             .from("order_status_logs")
             .update({
               changed_by: admin.adminId,
-              change_reason: "등급 확정 취소로 자동 되돌림",
+              change_reason: "일련번호 확정 취소로 자동 되돌림",
             })
             .eq("order_id", orderId)
             .eq("new_status", "DISTRIBUTOR_SHIPPED")

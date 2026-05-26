@@ -13,6 +13,7 @@ import {
   ORDER_STATUS_LABELS,
   PAYMENT_STATUS_LABELS,
   SHIPPING_FEE,
+  getCertLookupUrl,
 } from "@/constants/grading";
 import { cn } from "@/lib/utils";
 import {
@@ -534,8 +535,12 @@ export function OrderDetailClient({
               photos.push({ label: "슬랩", url: card.slabPhotoUrl });
             }
 
-            const showGradeBadge = card.gradeResult && showGrade;
-            const showLockedBadge = card.gradeResult && !showGrade;
+            // 일련번호가 입력되면 그레이딩사 인증 페이지에서 등급을 직접 조회할 수 있다.
+            // 사용자가 "실물 수령 후 확인" (DENY) 을 선택했으면 버튼은 비활성화.
+            const hasSerial = !!card.serialNumber;
+            const certUrl = hasSerial
+              ? getCertLookupUrl(order.gradingCompany, card.serialNumber!)
+              : null;
 
             return (
               <div
@@ -578,14 +583,25 @@ export function OrderDetailClient({
                           </p>
                         )}
                       </div>
-                      {showGradeBadge ? (
-                        <span className="shrink-0 rounded-full bg-primary/10 px-3 py-1 text-sm font-bold text-primary">
-                          {card.gradeResult}
-                        </span>
-                      ) : showLockedBadge ? (
-                        <span className="shrink-0 rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
-                          수령 시 확인
-                        </span>
+                      {hasSerial && certUrl ? (
+                        showGrade ? (
+                          <a
+                            href={certUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="shrink-0 rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
+                          >
+                            등급 확인하기 ↗
+                          </a>
+                        ) : (
+                          <span
+                            aria-disabled="true"
+                            title="실물 수령 후 확인을 선택해 잠겨 있습니다."
+                            className="shrink-0 cursor-not-allowed rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground"
+                          >
+                            수령 시 확인
+                          </span>
+                        )
                       ) : null}
                     </div>
 

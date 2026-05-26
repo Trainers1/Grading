@@ -78,11 +78,9 @@ async function GradingContent({
     });
   }
 
-  // 등급+일련번호 둘 다 채워진 것만 "확정". 하나라도 빠지면 입력 대기 탭에 노출.
-  const pending = allCards.filter(
-    (c) => !c.gradeResult || !c.serialNumber
-  );
-  const graded = allCards.filter((c) => c.gradeResult && c.serialNumber);
+  // 일련번호가 채워진 것만 "확정". 비면 입력 대기 탭에 노출.
+  const pending = allCards.filter((c) => !c.serialNumber);
+  const graded = allCards.filter((c) => c.serialNumber);
 
   const subTabBaseHref = (target: SubTab) => {
     const sp = new URLSearchParams();
@@ -96,7 +94,7 @@ async function GradingContent({
       <div>
         <h1 className="text-2xl font-bold">등급 결과 관리</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          카드별 등급 입력 및 결과 확인
+          카드별 일련번호 입력 — 등급은 사용자가 그레이딩사 사이트에서 직접 조회
         </p>
       </div>
 
@@ -106,13 +104,13 @@ async function GradingContent({
           <p className="mt-2 text-3xl font-bold">{allCards.length}</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-5">
-          <p className="text-sm text-muted-foreground">등급 대기</p>
+          <p className="text-sm text-muted-foreground">일련번호 대기</p>
           <p className="mt-2 text-3xl font-bold text-warning">
             {pending.length}
           </p>
         </div>
         <div className="rounded-xl border border-border bg-card p-5">
-          <p className="text-sm text-muted-foreground">등급 확정</p>
+          <p className="text-sm text-muted-foreground">일련번호 입력 완료</p>
           <p className="mt-2 text-3xl font-bold text-success">
             {graded.length}
           </p>
@@ -128,7 +126,7 @@ async function GradingContent({
               : "border-transparent text-muted-foreground hover:text-foreground"
           }`}
         >
-          등급 입력 ({pending.length})
+          일련번호 입력 ({pending.length})
         </Link>
         <Link
           href={subTabBaseHref("confirmed")}
@@ -138,7 +136,7 @@ async function GradingContent({
               : "border-transparent text-muted-foreground hover:text-foreground"
           }`}
         >
-          등급 확정 내역 ({graded.length})
+          일련번호 입력 내역 ({graded.length})
         </Link>
       </div>
 
@@ -161,7 +159,7 @@ async function GradingContent({
                     </p>
                   </div>
                   <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                    등급 대기 {companyPending.length}장
+                    일련번호 대기 {companyPending.length}장
                   </span>
                 </header>
                 {companyPending.length === 0 ? (
@@ -196,16 +194,16 @@ function ConfirmedTable({ cards }: { cards: CardWithOrder[] }) {
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card">
       <div className="border-b border-border p-5">
-        <h2 className="font-semibold">등급 확정 내역</h2>
+        <h2 className="font-semibold">일련번호 입력 내역</h2>
         <p className="mt-1 text-xs text-muted-foreground">
-          등급 결과가 입력된 카드 목록입니다. 잘못 입력했다면 "확정 취소"로
-          되돌릴 수 있습니다. 한 주문의 카드 중 하나라도 등급이 비면 주문은
+          일련번호가 입력된 카드 목록입니다. 잘못 입력했다면 "입력 취소"로
+          되돌릴 수 있습니다. 한 주문의 카드 중 하나라도 일련번호가 비면 주문은
           자동으로 그레이딩 진행 중 단계로 돌아갑니다.
         </p>
       </div>
       {cards.length === 0 ? (
         <p className="px-5 py-8 text-center text-sm text-muted-foreground">
-          확정된 등급 결과가 없습니다.
+          입력된 일련번호가 없습니다.
         </p>
       ) : (
         <>
@@ -218,7 +216,6 @@ function ConfirmedTable({ cards }: { cards: CardWithOrder[] }) {
                   <th className="px-5 py-3">고객</th>
                   <th className="px-5 py-3">회사</th>
                   <th className="px-5 py-3">카드 정보</th>
-                  <th className="px-5 py-3">등급 결과</th>
                   <th className="px-5 py-3">일련번호</th>
                   <th className="px-5 py-3 text-right">관리</th>
                 </tr>
@@ -245,11 +242,6 @@ function ConfirmedTable({ cards }: { cards: CardWithOrder[] }) {
                       <p className="font-mono text-[10px] text-muted-foreground">
                         ID: {c.id.slice(0, 8)}
                       </p>
-                    </td>
-                    <td className="px-5 py-3">
-                      <span className="rounded-md bg-success/10 px-2 py-1 font-medium text-success">
-                        {c.gradeResult}
-                      </span>
                     </td>
                     <td className="px-5 py-3 font-mono text-xs">
                       {c.serialNumber ?? "-"}
@@ -286,15 +278,12 @@ function ConfirmedTable({ cards }: { cards: CardWithOrder[] }) {
                     >
                       {c.orderId}
                     </Link>
-                    <span className="shrink-0 rounded-md bg-success/10 px-2 py-0.5 text-xs font-medium text-success">
-                      {c.gradeResult}
-                    </span>
-                  </div>
-                  <div className="mt-1 flex items-baseline justify-between gap-2 text-sm">
-                    <span className="font-medium">{c.customerName}</span>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="shrink-0 text-xs text-muted-foreground">
                       {c.gradingCompany}
                     </span>
+                  </div>
+                  <div className="mt-1 text-sm font-medium">
+                    {c.customerName}
                   </div>
                   <p className="mt-1 text-sm text-foreground">{cardInfo}</p>
                   <p className="mt-0.5 text-xs text-muted-foreground">

@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { GRADE_PRESETS } from "@/constants/grading";
 import { bulkUpsertGradeResultsAction } from "@/lib/orders/admin-actions";
 import type { GradingCompany } from "@/types";
 
@@ -25,126 +24,19 @@ function describeCard(c: PendingCard): string {
   return parts.length > 0 ? parts.join(" · ") : "정보 미입력";
 }
 
-type DraftEntry = {
-  gradeResult: string;
-  serialNumber: string;
-  customMode: boolean;
-};
-
-const EMPTY_DRAFT: DraftEntry = {
-  gradeResult: "",
-  serialNumber: "",
-  customMode: false,
-};
-
-function GradeInput({
-  card,
-  draft,
-  isPending,
-  onUpdate,
-  onClear,
-}: {
-  card: PendingCard;
-  draft: DraftEntry;
-  isPending: boolean;
-  onUpdate: (patch: Partial<DraftEntry>) => void;
-  onClear: () => void;
-}) {
-  const presets = GRADE_PRESETS[card.gradingCompany];
-
-  return (
-    <div className="flex flex-col gap-1.5">
-      {!draft.customMode ? (
-        <div className="flex flex-wrap gap-1.5">
-          {presets.map((p) => {
-            const selected = draft.gradeResult === p.value;
-            return (
-              <button
-                key={p.value}
-                type="button"
-                onClick={() =>
-                  onUpdate({ gradeResult: selected ? "" : p.value })
-                }
-                disabled={isPending}
-                className={`rounded-md border px-2.5 py-1 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-                  selected
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-border hover:border-primary hover:bg-primary/5 hover:text-primary"
-                }`}
-              >
-                {p.label}
-              </button>
-            );
-          })}
-          <button
-            type="button"
-            onClick={() =>
-              onUpdate({
-                customMode: true,
-                gradeResult: presets.some((p) => p.value === draft.gradeResult)
-                  ? ""
-                  : draft.gradeResult,
-              })
-            }
-            disabled={isPending}
-            className="rounded-md border border-dashed border-border px-2.5 py-1 text-xs font-medium text-muted-foreground hover:border-primary hover:text-primary disabled:opacity-50"
-          >
-            {card.gradingCompany} N (직접 입력)
-          </button>
-        </div>
-      ) : (
-        <div className="flex gap-1.5">
-          <input
-            type="text"
-            value={draft.gradeResult}
-            onChange={(e) => onUpdate({ gradeResult: e.target.value })}
-            placeholder={`예: ${card.gradingCompany} 10`}
-            disabled={isPending}
-            className="flex-1 rounded-md border border-border bg-background px-2 py-1 text-xs sm:w-36 sm:flex-initial"
-            autoFocus
-          />
-          <button
-            type="button"
-            onClick={() =>
-              onUpdate({ customMode: false, gradeResult: "" })
-            }
-            disabled={isPending}
-            className="shrink-0 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
-          >
-            취소
-          </button>
-        </div>
-      )}
-      {(draft.gradeResult || draft.serialNumber) && (
-        <button
-          type="button"
-          onClick={onClear}
-          disabled={isPending}
-          className="self-start text-[10px] text-muted-foreground hover:text-error"
-        >
-          입력값 비우기
-        </button>
-      )}
-    </div>
-  );
-}
-
 export function PendingGradeForm({ cards }: { cards: PendingCard[] }) {
   const router = useRouter();
-  const [drafts, setDrafts] = useState<Record<string, DraftEntry>>({});
+  const [serials, setSerials] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const updateDraft = (cardId: string, patch: Partial<DraftEntry>) => {
-    setDrafts((prev) => ({
-      ...prev,
-      [cardId]: { ...EMPTY_DRAFT, ...prev[cardId], ...patch },
-    }));
+  const updateSerial = (cardId: string, value: string) => {
+    setSerials((prev) => ({ ...prev, [cardId]: value }));
   };
 
-  const clearDraft = (cardId: string) => {
-    setDrafts((prev) => {
+  const clearSerial = (cardId: string) => {
+    setSerials((prev) => {
       const next = { ...prev };
       delete next[cardId];
       return next;
@@ -154,28 +46,16 @@ export function PendingGradeForm({ cards }: { cards: PendingCard[] }) {
   const readyEntries = useMemo(() => {
     return cards
       .map((c) => {
-        const d = drafts[c.id];
-        if (!d) return null;
-        const g = d.gradeResult.trim();
-        const s = d.serialNumber.trim();
-        if (!g || !s) return null;
-        return { cardId: c.id, gradeResult: g, serialNumber: s };
+        const s = (serials[c.id] ?? "").trim();
+        if (!s) return null;
+        return { cardId: c.id, serialNumber: s };
       })
       .filter((x): x is NonNullable<typeof x> => x !== null);
-  }, [cards, drafts]);
-
-  const partialCount = useMemo(() => {
-    return Object.entries(drafts).reduce((sum, [cardId, d]) => {
-      const g = d.gradeResult.trim();
-      const s = d.serialNumber.trim();
-      if ((g && !s) || (!g && s)) return sum + 1;
-      return sum;
-    }, 0);
-  }, [drafts]);
+  }, [cards, serials]);
 
   const handleUpload = () => {
     if (readyEntries.length === 0) {
-      setError("등급과 일련번호가 모두 입력된 카드가 없습니다.");
+      setError("일련번호가 입력된 카드가 없습니다.");
       return;
     }
     setError(null);
@@ -190,11 +70,11 @@ export function PendingGradeForm({ cards }: { cards: PendingCard[] }) {
       }
       const promoted = result.promotedOrderIds.length;
       setNotice(
-        `${result.appliedCount}건 등급 저장 완료${
+        `${result.appliedCount}건 일련번호 저장 완료${
           promoted > 0 ? ` · 주문 ${promoted}건 등급 확정으로 이동` : ""
-        }${result.skippedCount > 0 ? ` (스킵 ${result.skippedCount}건)` : ""}`
+        }`
       );
-      setDrafts({});
+      setSerials({});
       router.refresh();
     });
   };
@@ -203,17 +83,16 @@ export function PendingGradeForm({ cards }: { cards: PendingCard[] }) {
     <div className="space-y-3">
       <div className="rounded-xl border border-border bg-card">
         <div className="border-b border-border p-5">
-          <h2 className="font-semibold">등급 입력 대기</h2>
+          <h2 className="font-semibold">일련번호 입력 대기</h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            등급 버튼 + 일련번호를 입력한 뒤 하단의 "업로드" 버튼을 누르면 적용됩니다.
-            한 카드라도 둘 중 하나가 비면 그 카드는 업로드되지 않습니다.
-            한 주문의 모든 카드가 등급+일련번호를 가지면 주문이 자동으로 등급
-            확정으로 이동합니다.
+            카드별 일련번호를 입력한 뒤 하단의 "업로드" 버튼을 누르면 적용됩니다.
+            한 주문의 모든 카드에 일련번호가 채워지면 주문이 자동으로 등급 확정으로
+            이동합니다.
           </p>
         </div>
         {cards.length === 0 ? (
           <p className="px-5 py-8 text-center text-sm text-muted-foreground">
-            등급 입력 대기 중인 카드가 없습니다.
+            일련번호 입력 대기 중인 카드가 없습니다.
           </p>
         ) : (
           <>
@@ -226,16 +105,13 @@ export function PendingGradeForm({ cards }: { cards: PendingCard[] }) {
                     <th className="px-5 py-3">고객</th>
                     <th className="px-5 py-3">회사</th>
                     <th className="px-5 py-3">카드 정보</th>
-                    <th className="px-5 py-3">등급 입력</th>
                     <th className="px-5 py-3">일련번호</th>
                   </tr>
                 </thead>
                 <tbody>
                   {cards.map((c) => {
-                    const draft = drafts[c.id] ?? EMPTY_DRAFT;
-                    const ready =
-                      !!draft.gradeResult.trim() &&
-                      !!draft.serialNumber.trim();
+                    const serial = serials[c.id] ?? "";
+                    const ready = !!serial.trim();
 
                     return (
                       <tr
@@ -261,27 +137,28 @@ export function PendingGradeForm({ cards }: { cards: PendingCard[] }) {
                           </p>
                         </td>
                         <td className="px-5 py-3">
-                          <GradeInput
-                            card={c}
-                            draft={draft}
-                            isPending={isPending}
-                            onUpdate={(patch) => updateDraft(c.id, patch)}
-                            onClear={() => clearDraft(c.id)}
-                          />
-                        </td>
-                        <td className="px-5 py-3">
-                          <input
-                            type="text"
-                            value={draft.serialNumber}
-                            onChange={(e) =>
-                              updateDraft(c.id, {
-                                serialNumber: e.target.value,
-                              })
-                            }
-                            placeholder="예: 12345678"
-                            disabled={isPending}
-                            className="w-40 rounded-md border border-border bg-background px-2 py-1.5 text-sm"
-                          />
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={serial}
+                              onChange={(e) =>
+                                updateSerial(c.id, e.target.value)
+                              }
+                              placeholder="예: 12345678"
+                              disabled={isPending}
+                              className="w-40 rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+                            />
+                            {serial && (
+                              <button
+                                type="button"
+                                onClick={() => clearSerial(c.id)}
+                                disabled={isPending}
+                                className="text-[10px] text-muted-foreground hover:text-error"
+                              >
+                                비우기
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -293,9 +170,8 @@ export function PendingGradeForm({ cards }: { cards: PendingCard[] }) {
             {/* 모바일 카드 리스트 (md 미만) */}
             <div className="divide-y divide-border md:hidden">
               {cards.map((c) => {
-                const draft = drafts[c.id] ?? EMPTY_DRAFT;
-                const ready =
-                  !!draft.gradeResult.trim() && !!draft.serialNumber.trim();
+                const serial = serials[c.id] ?? "";
+                const ready = !!serial.trim();
                 return (
                   <div
                     key={c.id}
@@ -317,33 +193,27 @@ export function PendingGradeForm({ cards }: { cards: PendingCard[] }) {
                       ID: {c.id.slice(0, 8)}
                     </p>
 
-                    <div className="mt-2 space-y-2">
-                      <div>
-                        <p className="text-xs text-muted-foreground">등급</p>
-                        <div className="mt-0.5">
-                          <GradeInput
-                            card={c}
-                            draft={draft}
-                            isPending={isPending}
-                            onUpdate={(patch) => updateDraft(c.id, patch)}
-                            onClear={() => clearDraft(c.id)}
-                          />
-                        </div>
-                      </div>
-                      <label className="block text-xs">
-                        <span className="text-muted-foreground">일련번호</span>
-                        <input
-                          type="text"
-                          value={draft.serialNumber}
-                          onChange={(e) =>
-                            updateDraft(c.id, { serialNumber: e.target.value })
-                          }
-                          placeholder="예: 12345678"
-                          disabled={isPending}
-                          className="mt-0.5 w-full rounded-md border border-border bg-background px-2 py-2 text-sm"
-                        />
-                      </label>
-                    </div>
+                    <label className="mt-2 block text-xs">
+                      <span className="text-muted-foreground">일련번호</span>
+                      <input
+                        type="text"
+                        value={serial}
+                        onChange={(e) => updateSerial(c.id, e.target.value)}
+                        placeholder="예: 12345678"
+                        disabled={isPending}
+                        className="mt-0.5 w-full rounded-md border border-border bg-background px-2 py-2 text-sm"
+                      />
+                    </label>
+                    {serial && (
+                      <button
+                        type="button"
+                        onClick={() => clearSerial(c.id)}
+                        disabled={isPending}
+                        className="mt-1 text-[10px] text-muted-foreground hover:text-error"
+                      >
+                        비우기
+                      </button>
+                    )}
                   </div>
                 );
               })}
@@ -357,11 +227,6 @@ export function PendingGradeForm({ cards }: { cards: PendingCard[] }) {
           <span>
             <span className="font-semibold text-success">{readyEntries.length}건</span>{" "}
             업로드 준비됨
-            {partialCount > 0 && (
-              <span className="ml-2 text-warning">
-                · 부분 입력 {partialCount}건은 스킵됩니다
-              </span>
-            )}
           </span>
           {error && <span className="text-error">{error}</span>}
           {notice && <span className="text-success">{notice}</span>}
