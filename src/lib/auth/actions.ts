@@ -9,6 +9,13 @@ import {
   recordAuthFailure,
   resetAuthAttempts,
 } from "@/lib/auth/rate-limit";
+import {
+  FIELD_LIMITS,
+  isValidEmail,
+  isValidPhone,
+  normalizeEmail,
+  validatePasswordStrength,
+} from "@/lib/auth/validation";
 
 export type ExpectedRole = "customer" | "admin";
 
@@ -183,7 +190,7 @@ export async function signUpAction(params: {
   /** 선택 — 예금주 */
   accountHolder?: string;
 }): Promise<SignUpResult> {
-  const email = params.email?.trim() ?? "";
+  const email = normalizeEmail(params.email ?? "");
   const password = params.password ?? "";
   const name = params.name?.trim() ?? "";
   const phone = params.phone?.trim() ?? "";
@@ -198,6 +205,32 @@ export async function signUpAction(params: {
     return { ok: false, error: "필수 항목을 모두 입력해 주세요." };
   }
 
+  if (!isValidEmail(email)) {
+    return { ok: false, error: "올바른 이메일 형식을 입력해 주세요." };
+  }
+  if (!isValidPhone(phone)) {
+    return {
+      ok: false,
+      error: "올바른 연락처 형식을 입력해 주세요. (010-XXXX-XXXX)",
+    };
+  }
+  const pwCheck = validatePasswordStrength(password);
+  if (!pwCheck.ok) {
+    return { ok: false, error: pwCheck.error };
+  }
+  if (
+    name.length > FIELD_LIMITS.name ||
+    phone.length > FIELD_LIMITS.phone ||
+    postalCode.length > FIELD_LIMITS.postalCode ||
+    address.length > FIELD_LIMITS.address ||
+    addressDetail.length > FIELD_LIMITS.addressDetail ||
+    bankName.length > FIELD_LIMITS.bankName ||
+    accountNumber.length > FIELD_LIMITS.accountNumber ||
+    accountHolder.length > FIELD_LIMITS.accountHolder
+  ) {
+    return { ok: false, error: "입력값이 너무 깁니다." };
+  }
+
   let supabase;
   try {
     supabase = await createServerClient();
@@ -206,6 +239,10 @@ export async function signUpAction(params: {
     return { ok: false, error: FALLBACK_ERROR };
   }
 
+  // raw_user_meta_data 에는 트리거가 profiles 행 생성 시 참조하는 최소 필드만 둔다.
+  // 계좌·주소 등 민감 정보는 server action 이 직접 profiles 에 기록하는 방식이
+  // 더 안전하지만, 현재 트리거가 metadata 전체를 신뢰하는 구조라 일단 동일하게
+  // 전달. 계좌 정보 분리는 추후 트리거 리팩터 시 처리.
   const { error } = await supabase.auth.signUp({
     email,
     password,
@@ -431,8 +468,9 @@ export async function changeMyPasswordAction(params: {
   if (!current || !next) {
     return { ok: false, error: "현재 비밀번호와 새 비밀번호를 입력해 주세요." };
   }
-  if (next.length < 8) {
-    return { ok: false, error: "새 비밀번호는 8자 이상이어야 합니다." };
+  const strength = validatePasswordStrength(next);
+  if (!strength.ok) {
+    return { ok: false, error: `새 ${strength.error}` };
   }
   if (current === next) {
     return { ok: false, error: "새 비밀번호가 현재 비밀번호와 동일합니다." };

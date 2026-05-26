@@ -85,6 +85,12 @@ export function MyInfoPanel({ profile }: { profile: MyProfile }) {
       setPwError("새 비밀번호는 8자 이상이어야 합니다.");
       return;
     }
+    if (!/(?=.*[a-zA-Z])(?=.*[0-9])(?=.*[!@#$%^&*])/.test(pw.next)) {
+      setPwError(
+        "새 비밀번호는 영문+숫자+특수문자(!@#$%^&*) 조합이어야 합니다."
+      );
+      return;
+    }
     startSavePw(async () => {
       const r = await changeMyPasswordAction({
         currentPassword: pw.current,
@@ -204,7 +210,7 @@ export function MyInfoPanel({ profile }: { profile: MyProfile }) {
             type="password"
             value={pw.next}
             onChange={(e) => setPw({ ...pw, next: e.target.value })}
-            placeholder="8자 이상"
+            placeholder="8자 이상, 영문+숫자+특수문자"
           />
         </div>
         <div className="space-y-2">
