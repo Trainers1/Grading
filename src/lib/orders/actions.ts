@@ -211,6 +211,141 @@ export async function confirmOrderReceiptAction(input: {
   return { ok: true };
 }
 
+// 고객 자가 취소 — 마이페이지 주문 상세에서 본인이 주문을 취소한다.
+// 허용 조건: 본인 소유 + 미취소 + 총판 발송 전(SHIPPED_OUT 이상 차단).
+// 효과: orders.cancelled_at + cancel_reason 만 기록. 환불은 운영자가
+//       refundOrderAction 으로 별도 처리 (Toss 환불 자동화 미구현).
+const NON_CANCELLABLE_BY_USER: ReadonlySet<string> = new Set([
+  "SHIPPED_OUT",
+  "DISTRIBUTOR_SHIPPED",
+  "GRADE_CONFIRMED",
+  "TRAINERS_ARRIVED",
+  "COMPLETED",
+]);
+
+export async function cancelMyOrderAction(input: {
+  orderId: string;
+  reason?: string;
+}): Promise<PayActionResult> {
+  if (!input.orderId) return { ok: false, error: "주문번호가 누락되었습니다." };
+
+  const supabase = await createServerClient();
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return { ok: false, error: "로그인이 필요합니다." };
+
+  const { data: order, error: oErr } = await supabase
+    .from("orders")
+    .select("id, user_id, order_status, cancelled_at, payment_status")
+    .eq("id", input.orderId)
+    .maybeSingle();
+
+  if (oErr || !order) return { ok: false, error: "주문을 찾을 수 없습니다." };
+  if (order.user_id !== auth.user.id) {
+    return { ok: false, error: "본인 주문만 취소할 수 있습니다." };
+  }
+  if (order.cancelled_at) {
+    return { ok: false, error: "이미 취소된 주문입니다." };
+  }
+  if (NON_CANCELLABLE_BY_USER.has(order.order_status)) {
+    return {
+      ok: false,
+      error:
+        "총판 발송 이후에는 취소가 불가합니다. 고객센터로 문의해 주세요.",
+    };
+  }
+
+  const customReason = input.reason?.trim() ?? "";
+  if (customReason.length > 500) {
+    return { ok: false, error: "취소 사유가 너무 깁니다 (500자 이내)." };
+  }
+  const reason = customReason ? `고객 취소 — ${customReason}` : "고객 취소";
+
+  let service;
+  try {
+    service = createServiceClient();
+  } catch (err) {
+    console.error("[orders] service-role unavailable", err);
+    return { ok: false, error: "서비스가 일시적으로 불가능합니다." };
+  }
+
+  const { error: updErr } = await service
+    .from("orders")
+    .update({
+      cancelled_at: new Date().toISOString(),
+      cancel_reason: reason,
+    })
+    .eq("id", order.id);
+
+  if (updErr) {
+    console.error("[orders] cancelMyOrderAction failed", updErr);
+    return { ok: false, error: "주문 취소에 실패했습니다." };
+  }
+
+  console.info(
+    `[orders] self-cancelled id=${order.id} user=${auth.user.id} payment=${order.payment_status}`
+  );
+
+  revalidatePath("/mypage/orders");
+  revalidatePath(`/mypage/orders/${order.id}`);
+  revalidatePath("/admin/orders");
+  revalidatePath(`/admin/orders/${order.id}`);
+  return { ok: true };
+}
+
+// 스포일러 설정 변경 — 등급 결과를 마이페이지에서 바로 볼지(ALLOW) 실물 수령 후 볼지(DENY).
+// 허용 조건: 본인 소유 + 미취소. COMPLETED 이후에는 의미가 없지만 차단하지는 않는다.
+export async function updateOrderSpoilerPreferenceAction(input: {
+  orderId: string;
+  spoilerPreference: SpoilerPreference;
+}): Promise<PayActionResult> {
+  if (!input.orderId) return { ok: false, error: "주문번호가 누락되었습니다." };
+  if (
+    input.spoilerPreference !== "ALLOW" &&
+    input.spoilerPreference !== "DENY"
+  ) {
+    return { ok: false, error: "허용되지 않은 스포일러 설정입니다." };
+  }
+
+  const supabase = await createServerClient();
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return { ok: false, error: "로그인이 필요합니다." };
+
+  const { data: order, error: oErr } = await supabase
+    .from("orders")
+    .select("id, user_id, cancelled_at")
+    .eq("id", input.orderId)
+    .maybeSingle();
+
+  if (oErr || !order) return { ok: false, error: "주문을 찾을 수 없습니다." };
+  if (order.user_id !== auth.user.id) {
+    return { ok: false, error: "본인 주문만 변경할 수 있습니다." };
+  }
+  if (order.cancelled_at) {
+    return { ok: false, error: "취소된 주문은 변경할 수 없습니다." };
+  }
+
+  let service;
+  try {
+    service = createServiceClient();
+  } catch (err) {
+    console.error("[orders] service-role unavailable", err);
+    return { ok: false, error: "서비스가 일시적으로 불가능합니다." };
+  }
+
+  const { error: updErr } = await service
+    .from("orders")
+    .update({ spoiler_preference: input.spoilerPreference })
+    .eq("id", order.id);
+
+  if (updErr) {
+    console.error("[orders] updateOrderSpoilerPreferenceAction failed", updErr);
+    return { ok: false, error: "스포일러 설정 저장에 실패했습니다." };
+  }
+
+  revalidatePath(`/mypage/orders/${order.id}`);
+  return { ok: true };
+}
+
 // 주문 생성 Server Action (고객 측 apply 폼)
 //
 // 흐름:

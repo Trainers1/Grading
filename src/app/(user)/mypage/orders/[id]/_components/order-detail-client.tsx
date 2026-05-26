@@ -19,6 +19,8 @@ import { cn } from "@/lib/utils";
 import {
   updateOrderPickupMethodAction,
   confirmOrderReceiptAction,
+  cancelMyOrderAction,
+  updateOrderSpoilerPreferenceAction,
 } from "@/lib/orders/actions";
 import type {
   Card,
@@ -102,6 +104,10 @@ export function OrderDetailClient({
   const [isSavingPickup, startPickupTransition] = useTransition();
   const [receiptError, setReceiptError] = useState<string | null>(null);
   const [isConfirmingReceipt, startReceiptTransition] = useTransition();
+  const [spoilerError, setSpoilerError] = useState<string | null>(null);
+  const [isSavingSpoiler, startSpoilerTransition] = useTransition();
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  const [isCancelling, startCancelTransition] = useTransition();
   const router = useRouter();
 
   const canCancel = !NON_CANCELLABLE.includes(order.orderStatus);
@@ -652,14 +658,28 @@ export function OrderDetailClient({
           value={spoilerPreference}
           onChange={(v) => {
             const next = v as SpoilerPreference;
+            if (next === spoilerPreference) return;
             if (next === "ALLOW" && spoilerPreference === "DENY") {
               const ok = window.confirm(
                 "등급 결과가 바로 표시됩니다. 정말로 설정을 변경하시겠습니까?"
               );
               if (!ok) return;
             }
+            const previous = spoilerPreference;
             setSpoilerPreference(next);
-            // TODO: PATCH /api/orders/:id { spoilerPreference } 연동
+            setSpoilerError(null);
+            startSpoilerTransition(async () => {
+              const result = await updateOrderSpoilerPreferenceAction({
+                orderId: order.id,
+                spoilerPreference: next,
+              });
+              if (!result.ok) {
+                setSpoilerPreference(previous);
+                setSpoilerError(result.error);
+                return;
+              }
+              router.refresh();
+            });
           }}
           options={[
             {
@@ -674,6 +694,12 @@ export function OrderDetailClient({
             },
           ]}
         />
+        {isSavingSpoiler && (
+          <p className="mt-2 text-xs text-muted-foreground">저장 중...</p>
+        )}
+        {spoilerError && (
+          <p className="mt-2 text-xs text-error">{spoilerError}</p>
+        )}
       </div>
 
       {order.customerMemo && (
@@ -685,18 +711,33 @@ export function OrderDetailClient({
 
       <div className="mt-6">
         {canCancel ? (
-          <Button
-            variant="outline"
-            className="text-error hover:text-error"
-            onClick={() => {
-              // TODO: 취소 API 호출
-              if (confirm("주문을 취소하시겠습니까? 전액 환불됩니다.")) {
-                console.log("주문 취소:", order.id);
-              }
-            }}
-          >
-            주문 취소
-          </Button>
+          <div className="space-y-2">
+            <Button
+              variant="outline"
+              className="text-error hover:text-error"
+              disabled={isCancelling}
+              onClick={() => {
+                const ok = window.confirm(
+                  "주문을 취소하시겠습니까?\n선결제가 있다면 운영자가 확인 후 환불 처리합니다."
+                );
+                if (!ok) return;
+                setCancelError(null);
+                startCancelTransition(async () => {
+                  const result = await cancelMyOrderAction({ orderId: order.id });
+                  if (!result.ok) {
+                    setCancelError(result.error);
+                    return;
+                  }
+                  router.refresh();
+                });
+              }}
+            >
+              {isCancelling ? "취소 처리 중..." : "주문 취소"}
+            </Button>
+            {cancelError && (
+              <p className="text-xs text-error">{cancelError}</p>
+            )}
+          </div>
         ) : (
           order.orderStatus !== "COMPLETED" && (
             <p className="text-xs text-muted-foreground">
