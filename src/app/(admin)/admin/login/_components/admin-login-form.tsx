@@ -105,8 +105,7 @@ export function AdminLoginForm({ options }: { options: Option[] }) {
       </form>
 
       <p className="mt-6 text-center text-xs text-muted-foreground">
-        최초 비밀번호는 <strong>000000</strong> 입니다. 로그인 후 내 계정에서
-        변경하세요.
+        계정 안내가 필요하면 슈퍼관리자에게 문의해 주세요.
       </p>
     </>
   );

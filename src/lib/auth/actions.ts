@@ -4,6 +4,11 @@ import { redirect } from "next/navigation";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { safeRedirectOrFallback } from "@/lib/auth/redirect";
+import {
+  checkAuthAttempt,
+  recordAuthFailure,
+  resetAuthAttempts,
+} from "@/lib/auth/rate-limit";
 
 export type ExpectedRole = "customer" | "admin";
 
@@ -290,6 +295,16 @@ export async function unlockMyProfileAction(params: {
     return { ok: false, error: "비밀번호를 입력해 주세요." };
   }
 
+  // brute-force 1차 가드 — 인메모리 카운터
+  const rateKey = `unlock:${user.id}`;
+  const preCheck = checkAuthAttempt(rateKey);
+  if (preCheck.locked) {
+    return {
+      ok: false,
+      error: `로그인 시도가 많아 잠겼습니다. ${preCheck.retryAfterSec}초 후 다시 시도해 주세요.`,
+    };
+  }
+
   // 현재 비밀번호 검증 — 별도 익명 클라이언트(현재 세션 미영향)
   const { createClient } = await import("@supabase/supabase-js");
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -302,8 +317,16 @@ export async function unlockMyProfileAction(params: {
     password,
   });
   if (signInErr) {
+    const after = recordAuthFailure(rateKey);
+    if (after.locked) {
+      return {
+        ok: false,
+        error: `비밀번호 시도가 너무 많아 잠겼습니다. ${after.retryAfterSec}초 후 다시 시도해 주세요.`,
+      };
+    }
     return { ok: false, error: "비밀번호가 일치하지 않습니다." };
   }
+  resetAuthAttempts(rateKey);
 
   const service = createServiceClient();
   const { data: profile } = await service
@@ -415,6 +438,16 @@ export async function changeMyPasswordAction(params: {
     return { ok: false, error: "새 비밀번호가 현재 비밀번호와 동일합니다." };
   }
 
+  // brute-force 1차 가드 — 인메모리 카운터
+  const rateKey = `changepw:${user.id}`;
+  const preCheck = checkAuthAttempt(rateKey);
+  if (preCheck.locked) {
+    return {
+      ok: false,
+      error: `비밀번호 시도가 너무 많아 잠겼습니다. ${preCheck.retryAfterSec}초 후 다시 시도해 주세요.`,
+    };
+  }
+
   // 현재 비밀번호 검증
   const { createClient } = await import("@supabase/supabase-js");
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -427,8 +460,16 @@ export async function changeMyPasswordAction(params: {
     password: current,
   });
   if (signInErr) {
+    const after = recordAuthFailure(rateKey);
+    if (after.locked) {
+      return {
+        ok: false,
+        error: `비밀번호 시도가 너무 많아 잠겼습니다. ${after.retryAfterSec}초 후 다시 시도해 주세요.`,
+      };
+    }
     return { ok: false, error: "현재 비밀번호가 일치하지 않습니다." };
   }
+  resetAuthAttempts(rateKey);
 
   const { error } = await supabase.auth.updateUser({ password: next });
   if (error) {
