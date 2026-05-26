@@ -47,81 +47,157 @@ export function CancelledOrdersTab({
               : " 영구 삭제는 슈퍼관리자만 가능합니다."}
           </p>
         </div>
-        <table className="w-full text-sm">
-          <thead className="bg-muted/30 text-left text-xs uppercase text-muted-foreground">
-            <tr>
-              <th className="px-5 py-3">주문번호</th>
-              <th className="px-5 py-3">이름</th>
-              <th className="px-5 py-3">회사</th>
-              <th className="px-5 py-3">취소 사유</th>
-              <th className="px-5 py-3">취소일</th>
-              <th className="px-5 py-3">결제내역</th>
-              <th className="px-5 py-3 text-right">관리</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 ? (
+        {/* 데스크탑 테이블 (md 이상) */}
+        <div className="hidden overflow-x-auto md:block">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/30 text-left text-xs uppercase text-muted-foreground">
               <tr>
-                <td
-                  colSpan={7}
-                  className="px-5 py-10 text-center text-muted-foreground"
-                >
-                  {orders.length === 0
-                    ? "취소된 주문이 없습니다."
-                    : "조건에 맞는 주문이 없습니다."}
-                </td>
+                <th className="px-5 py-3">주문번호</th>
+                <th className="px-5 py-3">이름</th>
+                <th className="px-5 py-3">회사</th>
+                <th className="px-5 py-3">취소 사유</th>
+                <th className="px-5 py-3">취소일</th>
+                <th className="px-5 py-3">결제내역</th>
+                <th className="px-5 py-3 text-right">관리</th>
               </tr>
-            ) : (
-              filtered.map((o) => {
-                const pCount = paymentCounts[o.id] ?? 0;
-                const hasPayments = pCount > 0;
-                return (
-                  <tr key={o.id} className="border-t border-border align-top">
-                    <td className="px-5 py-3">
-                      <Link
-                        href={`/admin/orders/${o.id}`}
-                        className="font-mono text-primary hover:underline"
-                      >
-                        {o.id}
-                      </Link>
-                    </td>
-                    <td className="px-5 py-3">{o.name}</td>
-                    <td className="px-5 py-3">{o.gradingCompany}</td>
-                    <td className="px-5 py-3 text-muted-foreground">
-                      {o.cancelReason ?? "-"}
-                    </td>
-                    <td className="px-5 py-3 text-muted-foreground">
-                      {o.cancelledAt ? formatDate(o.cancelledAt) : "-"}
-                    </td>
-                    <td className="px-5 py-3 text-xs">
-                      {hasPayments ? (
-                        <span className="rounded-full bg-warning/10 px-2 py-0.5 font-medium text-warning">
-                          잔존 {pCount}건
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground">없음</span>
-                      )}
-                    </td>
-                    <td className="px-5 py-3">
-                      {hasPayments ? (
-                        <RefundOrderButton
-                          orderId={o.id}
-                          canRefund={canRefund}
-                        />
-                      ) : canDelete ? (
-                        <DeleteOrderButton orderId={o.id} canDelete={canDelete} />
-                      ) : (
-                        <span className="text-[10px] text-muted-foreground">
-                          -
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filtered.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={7}
+                    className="px-5 py-10 text-center text-muted-foreground"
+                  >
+                    {orders.length === 0
+                      ? "취소된 주문이 없습니다."
+                      : "조건에 맞는 주문이 없습니다."}
+                  </td>
+                </tr>
+              ) : (
+                filtered.map((o) => {
+                  const pCount = paymentCounts[o.id] ?? 0;
+                  const hasPayments = pCount > 0;
+                  return (
+                    <tr key={o.id} className="border-t border-border align-top">
+                      <td className="px-5 py-3">
+                        <Link
+                          href={`/admin/orders/${o.id}`}
+                          className="font-mono text-primary hover:underline"
+                        >
+                          {o.id}
+                        </Link>
+                      </td>
+                      <td className="px-5 py-3">{o.name}</td>
+                      <td className="px-5 py-3">{o.gradingCompany}</td>
+                      <td className="px-5 py-3 text-muted-foreground">
+                        {o.cancelReason ?? "-"}
+                      </td>
+                      <td className="px-5 py-3 text-muted-foreground">
+                        {o.cancelledAt ? formatDate(o.cancelledAt) : "-"}
+                      </td>
+                      <td className="px-5 py-3 text-xs">
+                        {hasPayments ? (
+                          <span className="rounded-full bg-warning/10 px-2 py-0.5 font-medium text-warning">
+                            잔존 {pCount}건
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">없음</span>
+                        )}
+                      </td>
+                      <td className="px-5 py-3">
+                        {hasPayments ? (
+                          <RefundOrderButton
+                            orderId={o.id}
+                            canRefund={canRefund}
+                          />
+                        ) : canDelete ? (
+                          <DeleteOrderButton
+                            orderId={o.id}
+                            canDelete={canDelete}
+                          />
+                        ) : (
+                          <span className="text-[10px] text-muted-foreground">
+                            -
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* 모바일 카드 리스트 (md 미만) */}
+        <div className="divide-y divide-border md:hidden">
+          {filtered.length === 0 ? (
+            <p className="px-4 py-10 text-center text-sm text-muted-foreground">
+              {orders.length === 0
+                ? "취소된 주문이 없습니다."
+                : "조건에 맞는 주문이 없습니다."}
+            </p>
+          ) : (
+            filtered.map((o) => {
+              const pCount = paymentCounts[o.id] ?? 0;
+              const hasPayments = pCount > 0;
+              return (
+                <div key={o.id} className="px-4 py-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <Link
+                      href={`/admin/orders/${o.id}`}
+                      className="font-mono text-sm font-medium text-primary hover:underline"
+                    >
+                      {o.id}
+                    </Link>
+                    {hasPayments ? (
+                      <span className="shrink-0 rounded-full bg-warning/10 px-2 py-0.5 text-[10px] font-medium text-warning">
+                        잔존 결제 {pCount}건
+                      </span>
+                    ) : (
+                      <span className="shrink-0 text-[10px] text-muted-foreground">
+                        결제 정리됨
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-1.5 flex items-baseline justify-between gap-2 text-sm">
+                    <span className="font-medium text-foreground">
+                      {o.name}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {o.gradingCompany}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {o.cancelReason ?? "-"}
+                    {o.cancelledAt && (
+                      <span className="ml-2 text-muted-foreground/80">
+                        · {formatDate(o.cancelledAt)} 취소
+                      </span>
+                    )}
+                  </p>
+                  <div className="mt-2">
+                    {hasPayments ? (
+                      <RefundOrderButton
+                        orderId={o.id}
+                        canRefund={canRefund}
+                      />
+                    ) : canDelete ? (
+                      <DeleteOrderButton
+                        orderId={o.id}
+                        canDelete={canDelete}
+                      />
+                    ) : (
+                      <span className="text-[10px] text-muted-foreground">
+                        삭제는 슈퍼관리자만 가능합니다.
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
       </div>
     </div>
   );

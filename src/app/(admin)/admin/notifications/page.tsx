@@ -176,26 +176,62 @@ export default async function NotificationsMonitorPage() {
             최근 24시간 내 실패 건이 없습니다.
           </div>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-muted/30 text-left text-xs uppercase text-muted-foreground">
-              <tr>
-                <th className="px-5 py-3">주문번호</th>
-                <th className="px-5 py-3">상태 키</th>
-                <th className="px-5 py-3">시도 횟수</th>
-                <th className="px-5 py-3">오류 내용</th>
-                <th className="px-5 py-3">발생 시각</th>
-              </tr>
-            </thead>
-            <tbody>
+          <>
+            {/* 데스크탑 테이블 (md 이상) */}
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/30 text-left text-xs uppercase text-muted-foreground">
+                  <tr>
+                    <th className="px-5 py-3">주문번호</th>
+                    <th className="px-5 py-3">상태 키</th>
+                    <th className="px-5 py-3">시도 횟수</th>
+                    <th className="px-5 py-3">오류 내용</th>
+                    <th className="px-5 py-3">발생 시각</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {typedFailRows.map((row) => (
+                    <tr key={row.id} className="border-t border-border">
+                      <td className="px-5 py-3 font-mono text-primary">
+                        {row.order_id}
+                      </td>
+                      <td className="px-5 py-3">{row.status_key}</td>
+                      <td className="px-5 py-3">
+                        <span
+                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                            row.attempt_count >= 5
+                              ? "bg-error/10 text-error"
+                              : row.attempt_count >= 3
+                              ? "bg-warning/10 text-warning"
+                              : "bg-muted text-muted-foreground"
+                          }`}
+                        >
+                          {row.attempt_count}회
+                          {row.attempt_count >= 5 && " (dead letter)"}
+                        </span>
+                      </td>
+                      <td className="max-w-xs truncate px-5 py-3 text-xs text-muted-foreground">
+                        {row.last_error ?? "—"}
+                      </td>
+                      <td className="px-5 py-3 text-muted-foreground">
+                        {formatDateTime(row.created_at)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* 모바일 카드 리스트 (md 미만) */}
+            <div className="divide-y divide-border md:hidden">
               {typedFailRows.map((row) => (
-                <tr key={row.id} className="border-t border-border">
-                  <td className="px-5 py-3 font-mono text-primary">
-                    {row.order_id}
-                  </td>
-                  <td className="px-5 py-3">{row.status_key}</td>
-                  <td className="px-5 py-3">
+                <div key={row.id} className="px-4 py-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="font-mono text-sm font-medium text-primary">
+                      {row.order_id}
+                    </span>
                     <span
-                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                      className={`shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${
                         row.attempt_count >= 5
                           ? "bg-error/10 text-error"
                           : row.attempt_count >= 3
@@ -204,19 +240,23 @@ export default async function NotificationsMonitorPage() {
                       }`}
                     >
                       {row.attempt_count}회
-                      {row.attempt_count >= 5 && " (dead letter)"}
+                      {row.attempt_count >= 5 && " (DLQ)"}
                     </span>
-                  </td>
-                  <td className="max-w-xs truncate px-5 py-3 text-xs text-muted-foreground">
+                  </div>
+                  <p className="mt-1 text-xs">
+                    <span className="text-muted-foreground">상태 키:</span>{" "}
+                    {row.status_key}
+                  </p>
+                  <p className="mt-1 break-words text-xs text-muted-foreground">
                     {row.last_error ?? "—"}
-                  </td>
-                  <td className="px-5 py-3 text-muted-foreground">
+                  </p>
+                  <p className="mt-1 text-[10px] text-muted-foreground">
                     {formatDateTime(row.created_at)}
-                  </td>
-                </tr>
+                  </p>
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+          </>
         )}
       </div>
     </div>

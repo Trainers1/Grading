@@ -43,7 +43,8 @@ export function AllOrdersTab({ orders }: { orders: Order[] }) {
             {filtered.length}건 / 전체 {orders.length}건)
           </p>
         </div>
-        <div className="overflow-x-auto">
+        {/* 데스크탑 테이블 (md 이상) */}
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-sm">
             <thead className="bg-muted/30 text-left text-xs uppercase text-muted-foreground">
               <tr>
@@ -118,6 +119,54 @@ export function AllOrdersTab({ orders }: { orders: Order[] }) {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* 모바일 카드 리스트 (md 미만) */}
+        <div className="divide-y divide-border md:hidden">
+          {filtered.length === 0 ? (
+            <p className="px-4 py-10 text-center text-sm text-muted-foreground">
+              조건에 맞는 주문이 없습니다.
+            </p>
+          ) : (
+            filtered.map((o) => (
+              <Link
+                key={o.id}
+                href={`/admin/orders/${o.id}`}
+                className="block px-4 py-3 hover:bg-muted/20 active:bg-muted/40"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <span className="font-mono text-sm font-medium text-primary">
+                    {o.id}
+                  </span>
+                  <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                    {ORDER_STATUS_LABELS[o.orderStatus] ?? o.orderStatus}
+                  </span>
+                </div>
+                <div className="mt-1.5 flex items-baseline justify-between gap-2">
+                  <p className="text-sm font-medium text-foreground">
+                    {o.name}
+                  </p>
+                  <p className="shrink-0 text-xs text-muted-foreground">
+                    {o.phone}
+                  </p>
+                </div>
+                <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                  <span>
+                    {o.gradingCompany} / {o.serviceLevel}
+                  </span>
+                  <span className="text-right">{formatDate(o.createdAt)}</span>
+                  <span>
+                    {PAYMENT_STATUS_LABELS[o.paymentStatus] ?? o.paymentStatus}
+                  </span>
+                  <span className="text-right font-medium text-foreground">
+                    {formatCurrency(
+                      o.prepaidAmount + (o.overchargeAmount ?? 0)
+                    )}
+                  </span>
+                </div>
+              </Link>
+            ))
+          )}
         </div>
       </div>
     </div>

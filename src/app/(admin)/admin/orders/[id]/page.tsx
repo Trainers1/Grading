@@ -11,7 +11,7 @@ import {
 } from "@/constants/grading";
 import { formatFullAddress, resolveOrderShippingAddress } from "@/lib/address";
 import { StatusChanger } from "./_components/status-changer";
-import { CardEditor } from "./_components/card-editor";
+import { CardEditor, CardEditorMobile } from "./_components/card-editor";
 import { CancelOrderButton } from "./_components/cancel-order-button";
 import { DeleteOrderButton } from "../_components/delete-order-button";
 import { RefundOrderButton } from "../_components/refund-order-button";
@@ -65,9 +65,11 @@ export default async function OrderDetailPage({
         >
           ← 주문 관리로
         </Link>
-        <div className="mt-2 flex items-center justify-between gap-3">
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <h1 className="font-mono text-2xl font-bold">{order.id}</h1>
+            <h1 className="font-mono text-xl font-bold sm:text-2xl">
+              {order.id}
+            </h1>
             {order.cancelledAt && (
               <span className="rounded-full bg-error/10 px-3 py-1 text-xs font-medium text-error">
                 취소됨
@@ -223,43 +225,50 @@ export default async function OrderDetailPage({
         </div>
       </div>
 
-      <div className="rounded-xl border border-border bg-card">
+      <div className="overflow-hidden rounded-xl border border-border bg-card">
         <div className="border-b border-border p-5">
           <h2 className="font-semibold">카드 ({cards.length}장)</h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            각 항목을 직접 수정한 뒤 행 우측의 "저장" 버튼을 누르세요.
+            각 항목을 직접 수정한 뒤 우측(모바일에서는 하단)의 "저장" 버튼을 누르세요.
           </p>
         </div>
-        <table className="w-full text-sm">
-          <thead className="bg-muted/30 text-left text-xs uppercase text-muted-foreground">
-            <tr>
-              <th className="px-5 py-3">#</th>
-              <th className="px-5 py-3">영문명</th>
-              <th className="px-5 py-3">세트</th>
-              <th className="px-5 py-3">번호</th>
-              <th className="px-5 py-3">연도</th>
-              <th className="px-5 py-3">신고가액</th>
-              <th className="px-5 py-3">등급 결과</th>
-              <th className="px-5 py-3 text-right">관리</th>
-            </tr>
-          </thead>
-          <tbody>
-            {cards.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={8}
-                  className="px-5 py-8 text-center text-muted-foreground"
-                >
-                  등록된 카드가 없습니다.
-                </td>
-              </tr>
-            ) : (
-              cards.map((c, i) => (
-                <CardEditor key={c.id} card={c} index={i} />
-              ))
-            )}
-          </tbody>
-        </table>
+        {cards.length === 0 ? (
+          <p className="px-5 py-8 text-center text-sm text-muted-foreground">
+            등록된 카드가 없습니다.
+          </p>
+        ) : (
+          <>
+            {/* 데스크탑 테이블 (md 이상) */}
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/30 text-left text-xs uppercase text-muted-foreground">
+                  <tr>
+                    <th className="px-5 py-3">#</th>
+                    <th className="px-5 py-3">영문명</th>
+                    <th className="px-5 py-3">세트</th>
+                    <th className="px-5 py-3">번호</th>
+                    <th className="px-5 py-3">연도</th>
+                    <th className="px-5 py-3">신고가액</th>
+                    <th className="px-5 py-3">등급 결과</th>
+                    <th className="px-5 py-3 text-right">관리</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cards.map((c, i) => (
+                    <CardEditor key={c.id} card={c} index={i} />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* 모바일 카드 리스트 (md 미만) */}
+            <div className="divide-y divide-border md:hidden">
+              {cards.map((c, i) => (
+                <CardEditorMobile key={c.id} card={c} index={i} />
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
     </div>

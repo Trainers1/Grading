@@ -37,6 +37,98 @@ const EMPTY_DRAFT: DraftEntry = {
   customMode: false,
 };
 
+function GradeInput({
+  card,
+  draft,
+  isPending,
+  onUpdate,
+  onClear,
+}: {
+  card: PendingCard;
+  draft: DraftEntry;
+  isPending: boolean;
+  onUpdate: (patch: Partial<DraftEntry>) => void;
+  onClear: () => void;
+}) {
+  const presets = GRADE_PRESETS[card.gradingCompany];
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      {!draft.customMode ? (
+        <div className="flex flex-wrap gap-1.5">
+          {presets.map((p) => {
+            const selected = draft.gradeResult === p.value;
+            return (
+              <button
+                key={p.value}
+                type="button"
+                onClick={() =>
+                  onUpdate({ gradeResult: selected ? "" : p.value })
+                }
+                disabled={isPending}
+                className={`rounded-md border px-2.5 py-1 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                  selected
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border hover:border-primary hover:bg-primary/5 hover:text-primary"
+                }`}
+              >
+                {p.label}
+              </button>
+            );
+          })}
+          <button
+            type="button"
+            onClick={() =>
+              onUpdate({
+                customMode: true,
+                gradeResult: presets.some((p) => p.value === draft.gradeResult)
+                  ? ""
+                  : draft.gradeResult,
+              })
+            }
+            disabled={isPending}
+            className="rounded-md border border-dashed border-border px-2.5 py-1 text-xs font-medium text-muted-foreground hover:border-primary hover:text-primary disabled:opacity-50"
+          >
+            {card.gradingCompany} N (직접 입력)
+          </button>
+        </div>
+      ) : (
+        <div className="flex gap-1.5">
+          <input
+            type="text"
+            value={draft.gradeResult}
+            onChange={(e) => onUpdate({ gradeResult: e.target.value })}
+            placeholder={`예: ${card.gradingCompany} 10`}
+            disabled={isPending}
+            className="flex-1 rounded-md border border-border bg-background px-2 py-1 text-xs sm:w-36 sm:flex-initial"
+            autoFocus
+          />
+          <button
+            type="button"
+            onClick={() =>
+              onUpdate({ customMode: false, gradeResult: "" })
+            }
+            disabled={isPending}
+            className="shrink-0 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
+          >
+            취소
+          </button>
+        </div>
+      )}
+      {(draft.gradeResult || draft.serialNumber) && (
+        <button
+          type="button"
+          onClick={onClear}
+          disabled={isPending}
+          className="self-start text-[10px] text-muted-foreground hover:text-error"
+        >
+          입력값 비우기
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function PendingGradeForm({ cards }: { cards: PendingCard[] }) {
   const router = useRouter();
   const [drafts, setDrafts] = useState<Record<string, DraftEntry>>({});
@@ -119,161 +211,145 @@ export function PendingGradeForm({ cards }: { cards: PendingCard[] }) {
             확정으로 이동합니다.
           </p>
         </div>
-        <table className="w-full text-sm">
-          <thead className="bg-muted/30 text-left text-xs uppercase text-muted-foreground">
-            <tr>
-              <th className="px-5 py-3">주문번호</th>
-              <th className="px-5 py-3">고객</th>
-              <th className="px-5 py-3">회사</th>
-              <th className="px-5 py-3">카드 정보</th>
-              <th className="px-5 py-3">등급 입력</th>
-              <th className="px-5 py-3">일련번호</th>
-            </tr>
-          </thead>
-          <tbody>
-            {cards.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={6}
-                  className="px-5 py-8 text-center text-muted-foreground"
-                >
-                  등급 입력 대기 중인 카드가 없습니다.
-                </td>
-              </tr>
-            ) : (
-              cards.map((c) => {
+        {cards.length === 0 ? (
+          <p className="px-5 py-8 text-center text-sm text-muted-foreground">
+            등급 입력 대기 중인 카드가 없습니다.
+          </p>
+        ) : (
+          <>
+            {/* 데스크탑 테이블 (md 이상) */}
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/30 text-left text-xs uppercase text-muted-foreground">
+                  <tr>
+                    <th className="px-5 py-3">주문번호</th>
+                    <th className="px-5 py-3">고객</th>
+                    <th className="px-5 py-3">회사</th>
+                    <th className="px-5 py-3">카드 정보</th>
+                    <th className="px-5 py-3">등급 입력</th>
+                    <th className="px-5 py-3">일련번호</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cards.map((c) => {
+                    const draft = drafts[c.id] ?? EMPTY_DRAFT;
+                    const ready =
+                      !!draft.gradeResult.trim() &&
+                      !!draft.serialNumber.trim();
+
+                    return (
+                      <tr
+                        key={c.id}
+                        className={`border-t border-border align-top ${
+                          ready ? "bg-success/5" : ""
+                        }`}
+                      >
+                        <td className="px-5 py-3">
+                          <Link
+                            href={`/admin/orders/${c.orderId}`}
+                            className="font-mono text-primary hover:underline"
+                          >
+                            {c.orderId}
+                          </Link>
+                        </td>
+                        <td className="px-5 py-3">{c.customerName}</td>
+                        <td className="px-5 py-3">{c.gradingCompany}</td>
+                        <td className="px-5 py-3">
+                          <p className="font-medium">{describeCard(c)}</p>
+                          <p className="font-mono text-[10px] text-muted-foreground">
+                            ID: {c.id.slice(0, 8)}
+                          </p>
+                        </td>
+                        <td className="px-5 py-3">
+                          <GradeInput
+                            card={c}
+                            draft={draft}
+                            isPending={isPending}
+                            onUpdate={(patch) => updateDraft(c.id, patch)}
+                            onClear={() => clearDraft(c.id)}
+                          />
+                        </td>
+                        <td className="px-5 py-3">
+                          <input
+                            type="text"
+                            value={draft.serialNumber}
+                            onChange={(e) =>
+                              updateDraft(c.id, {
+                                serialNumber: e.target.value,
+                              })
+                            }
+                            placeholder="예: 12345678"
+                            disabled={isPending}
+                            className="w-40 rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* 모바일 카드 리스트 (md 미만) */}
+            <div className="divide-y divide-border md:hidden">
+              {cards.map((c) => {
                 const draft = drafts[c.id] ?? EMPTY_DRAFT;
-                const presets = GRADE_PRESETS[c.gradingCompany];
                 const ready =
                   !!draft.gradeResult.trim() && !!draft.serialNumber.trim();
-
                 return (
-                  <tr
+                  <div
                     key={c.id}
-                    className={`border-t border-border align-top ${
-                      ready ? "bg-success/5" : ""
-                    }`}
+                    className={`px-4 py-3 ${ready ? "bg-success/5" : ""}`}
                   >
-                    <td className="px-5 py-3">
+                    <div className="flex items-start justify-between gap-2">
                       <Link
                         href={`/admin/orders/${c.orderId}`}
-                        className="font-mono text-primary hover:underline"
+                        className="font-mono text-sm font-medium text-primary hover:underline"
                       >
                         {c.orderId}
                       </Link>
-                    </td>
-                    <td className="px-5 py-3">{c.customerName}</td>
-                    <td className="px-5 py-3">{c.gradingCompany}</td>
-                    <td className="px-5 py-3">
-                      <p className="font-medium">{describeCard(c)}</p>
-                      <p className="font-mono text-[10px] text-muted-foreground">
-                        ID: {c.id.slice(0, 8)}
-                      </p>
-                    </td>
-                    <td className="px-5 py-3">
-                      <div className="flex flex-col gap-1.5">
-                        {!draft.customMode ? (
-                          <div className="flex flex-wrap gap-1.5">
-                            {presets.map((p) => {
-                              const selected = draft.gradeResult === p.value;
-                              return (
-                                <button
-                                  key={p.value}
-                                  type="button"
-                                  onClick={() =>
-                                    updateDraft(c.id, {
-                                      gradeResult: selected ? "" : p.value,
-                                    })
-                                  }
-                                  disabled={isPending}
-                                  className={`rounded-md border px-2.5 py-1 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-                                    selected
-                                      ? "border-primary bg-primary/10 text-primary"
-                                      : "border-border hover:border-primary hover:bg-primary/5 hover:text-primary"
-                                  }`}
-                                >
-                                  {p.label}
-                                </button>
-                              );
-                            })}
-                            <button
-                              type="button"
-                              onClick={() =>
-                                updateDraft(c.id, {
-                                  customMode: true,
-                                  gradeResult: presets.some(
-                                    (p) => p.value === draft.gradeResult
-                                  )
-                                    ? ""
-                                    : draft.gradeResult,
-                                })
-                              }
-                              disabled={isPending}
-                              className="rounded-md border border-dashed border-border px-2.5 py-1 text-xs font-medium text-muted-foreground hover:border-primary hover:text-primary disabled:opacity-50"
-                            >
-                              {c.gradingCompany} N (직접 입력)
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex gap-1.5">
-                            <input
-                              type="text"
-                              value={draft.gradeResult}
-                              onChange={(e) =>
-                                updateDraft(c.id, {
-                                  gradeResult: e.target.value,
-                                })
-                              }
-                              placeholder={`예: ${c.gradingCompany} 10`}
-                              disabled={isPending}
-                              className="w-36 rounded-md border border-border bg-background px-2 py-1 text-xs"
-                              autoFocus
-                            />
-                            <button
-                              type="button"
-                              onClick={() =>
-                                updateDraft(c.id, {
-                                  customMode: false,
-                                  gradeResult: "",
-                                })
-                              }
-                              disabled={isPending}
-                              className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
-                            >
-                              취소
-                            </button>
-                          </div>
-                        )}
-                        {(draft.gradeResult || draft.serialNumber) && (
-                          <button
-                            type="button"
-                            onClick={() => clearDraft(c.id)}
-                            disabled={isPending}
-                            className="self-start text-[10px] text-muted-foreground hover:text-error"
-                          >
-                            입력값 비우기
-                          </button>
-                        )}
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        {c.customerName} · {c.gradingCompany}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-sm font-medium">{describeCard(c)}</p>
+                    <p className="mt-0.5 font-mono text-[10px] text-muted-foreground">
+                      ID: {c.id.slice(0, 8)}
+                    </p>
+
+                    <div className="mt-2 space-y-2">
+                      <div>
+                        <p className="text-xs text-muted-foreground">등급</p>
+                        <div className="mt-0.5">
+                          <GradeInput
+                            card={c}
+                            draft={draft}
+                            isPending={isPending}
+                            onUpdate={(patch) => updateDraft(c.id, patch)}
+                            onClear={() => clearDraft(c.id)}
+                          />
+                        </div>
                       </div>
-                    </td>
-                    <td className="px-5 py-3">
-                      <input
-                        type="text"
-                        value={draft.serialNumber}
-                        onChange={(e) =>
-                          updateDraft(c.id, { serialNumber: e.target.value })
-                        }
-                        placeholder="예: 12345678"
-                        disabled={isPending}
-                        className="w-40 rounded-md border border-border bg-background px-2 py-1.5 text-sm"
-                      />
-                    </td>
-                  </tr>
+                      <label className="block text-xs">
+                        <span className="text-muted-foreground">일련번호</span>
+                        <input
+                          type="text"
+                          value={draft.serialNumber}
+                          onChange={(e) =>
+                            updateDraft(c.id, { serialNumber: e.target.value })
+                          }
+                          placeholder="예: 12345678"
+                          disabled={isPending}
+                          className="mt-0.5 w-full rounded-md border border-border bg-background px-2 py-2 text-sm"
+                        />
+                      </label>
+                    </div>
+                  </div>
                 );
-              })
-            )}
-          </tbody>
-        </table>
+              })}
+            </div>
+          </>
+        )}
       </div>
 
       <div className="sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card/95 px-5 py-3 shadow-sm backdrop-blur">

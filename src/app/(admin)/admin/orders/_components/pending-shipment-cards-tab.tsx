@@ -255,7 +255,8 @@ function GroupSection({
         </button>
       </header>
 
-      <div className="overflow-x-auto">
+      {/* 데스크탑 테이블 (md 이상) */}
+      <div className="hidden overflow-x-auto md:block">
         <table className="w-full text-sm">
           <thead className="bg-muted/10 text-left text-xs uppercase text-muted-foreground">
             <tr>
@@ -319,6 +320,65 @@ function GroupSection({
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* 모바일 카드 리스트 (md 미만) */}
+      <div className="divide-y divide-border md:hidden">
+        {group.cards.map((c) => (
+          <div key={c.id} className="flex gap-3 px-4 py-3">
+            {c.frontImageUrl ? (
+              <a
+                href={c.frontImageUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={c.frontImageUrl}
+                  alt="카드 앞면"
+                  className="h-20 w-14 rounded border border-border object-cover"
+                />
+              </a>
+            ) : (
+              <div className="flex h-20 w-14 shrink-0 items-center justify-center rounded border border-dashed border-border text-[10px] text-muted-foreground">
+                없음
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between gap-2">
+                <Link
+                  href={`/admin/orders/${c.order.id}`}
+                  className="font-mono text-xs font-medium text-primary hover:underline"
+                >
+                  {c.order.id}
+                </Link>
+                <span className="shrink-0 text-xs text-muted-foreground">
+                  {formatDate(c.order.receivedAt ?? c.order.createdAt)}
+                </span>
+              </div>
+              <p className="mt-0.5 text-sm font-medium text-foreground">
+                {c.order.name}
+              </p>
+              {c.englishName && (
+                <p className="mt-1 truncate text-sm text-foreground">
+                  {c.englishName}
+                </p>
+              )}
+              <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                {[c.setName, c.cardNumber, c.year].filter(Boolean).join(" · ")}
+              </p>
+              {c.declaredValue ? (
+                <p className="mt-1 text-xs">
+                  신고가액{" "}
+                  <span className="font-medium text-foreground">
+                    ₩{formatNumber(c.declaredValue)}
+                  </span>
+                </p>
+              ) : null}
+            </div>
+          </div>
+        ))}
       </div>
     </section>
   );

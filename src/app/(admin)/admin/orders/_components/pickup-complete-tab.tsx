@@ -72,7 +72,8 @@ export function PickupCompleteTab({ orders }: { orders: Order[] }) {
           </div>
         )}
 
-        <div className="overflow-x-auto">
+        {/* 데스크탑 테이블 (md 이상) */}
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-sm">
             <thead className="bg-muted/30 text-left text-xs uppercase text-muted-foreground">
               <tr>
@@ -142,6 +143,59 @@ export function PickupCompleteTab({ orders }: { orders: Order[] }) {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* 모바일 카드 리스트 (md 미만) */}
+        <div className="divide-y divide-border md:hidden">
+          {filtered.length === 0 ? (
+            <p className="px-4 py-10 text-center text-sm text-muted-foreground">
+              {orders.length === 0
+                ? "수령 대기 중인 매장 수령 주문이 없습니다."
+                : "조건에 맞는 주문이 없습니다."}
+            </p>
+          ) : (
+            filtered.map((o) => (
+              <div key={o.id} className="px-4 py-3">
+                <div className="flex items-start justify-between gap-2">
+                  <Link
+                    href={`/admin/orders/${o.id}`}
+                    className="font-mono text-sm font-medium text-primary hover:underline"
+                  >
+                    {o.id}
+                  </Link>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {formatDate(o.createdAt)}
+                  </span>
+                </div>
+                <div className="mt-1.5 flex items-baseline justify-between gap-2">
+                  <p className="text-sm font-medium text-foreground">
+                    {o.name}
+                  </p>
+                  <p className="shrink-0 text-xs text-muted-foreground">
+                    {o.phone}
+                  </p>
+                </div>
+                <div className="mt-1 flex items-baseline justify-between gap-2 text-xs text-muted-foreground">
+                  <span>
+                    {o.gradingCompany} / {o.serviceLevel}
+                  </span>
+                  <span className="font-medium text-foreground">
+                    {formatCurrency(
+                      o.prepaidAmount + (o.overchargeAmount ?? 0)
+                    )}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleComplete(o.id)}
+                  disabled={isPending}
+                  className="mt-2 w-full rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isPending && pendingId === o.id ? "처리 중..." : "수령 완료"}
+                </button>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>

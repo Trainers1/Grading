@@ -192,7 +192,7 @@ function ServiceFormFields({
   onChange: (next: typeof EMPTY_DRAFT) => void;
 }) {
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <div className="space-y-1">
         <Label className="text-xs">코드</Label>
         <Input
@@ -251,7 +251,7 @@ function ServiceFormFields({
           }
         />
       </div>
-      <div className="col-span-2 space-y-1">
+      <div className="space-y-1 sm:col-span-2">
         <Label className="text-xs">설명 (선택)</Label>
         <Input
           value={values.description}

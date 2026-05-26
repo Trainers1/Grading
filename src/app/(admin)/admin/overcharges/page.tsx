@@ -71,61 +71,109 @@ export default async function OverchargesPage() {
             고객 승인 및 결제가 필요한 건
           </p>
         </div>
-        <table className="w-full text-sm">
-          <thead className="bg-muted/30 text-left text-xs uppercase text-muted-foreground">
-            <tr>
-              <th className="px-5 py-3">주문번호</th>
-              <th className="px-5 py-3">고객</th>
-              <th className="px-5 py-3">회사</th>
-              <th className="px-5 py-3">선결제</th>
-              <th className="px-5 py-3">오버차지</th>
-              <th className="px-5 py-3">상태</th>
-              <th className="px-5 py-3">액션</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pending.length === 0 ? (
+        {/* 데스크탑 테이블 (md 이상) */}
+        <div className="hidden overflow-x-auto md:block">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/30 text-left text-xs uppercase text-muted-foreground">
               <tr>
-                <td
-                  colSpan={7}
-                  className="px-5 py-8 text-center text-muted-foreground"
-                >
-                  대기 중인 오버차지가 없습니다.
-                </td>
+                <th className="px-5 py-3">주문번호</th>
+                <th className="px-5 py-3">고객</th>
+                <th className="px-5 py-3">회사</th>
+                <th className="px-5 py-3">선결제</th>
+                <th className="px-5 py-3">오버차지</th>
+                <th className="px-5 py-3">상태</th>
+                <th className="px-5 py-3">액션</th>
               </tr>
-            ) : (
-              pending.map((o) => (
-                <tr key={o.id} className="border-t border-border align-top">
-                  <td className="px-5 py-3">
-                    <Link
-                      href={`/admin/orders/${o.id}`}
-                      className="font-mono text-primary hover:underline"
-                    >
-                      {o.id}
-                    </Link>
-                  </td>
-                  <td className="px-5 py-3">{o.name}</td>
-                  <td className="px-5 py-3">{o.gradingCompany}</td>
-                  <td className="px-5 py-3">
-                    {formatCurrency(o.prepaidAmount)}
-                  </td>
-                  <td className="px-5 py-3 font-semibold text-warning">
-                    +{formatCurrency(o.overchargeAmount ?? 0)}
-                  </td>
-                  <td className="px-5 py-3">
-                    {PAYMENT_STATUS_LABELS[o.paymentStatus]}
-                  </td>
-                  <td className="px-5 py-3">
-                    <OverchargeRowActions
-                      orderId={o.id}
-                      initialAmount={o.overchargeAmount ?? 0}
-                    />
+            </thead>
+            <tbody>
+              {pending.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={7}
+                    className="px-5 py-8 text-center text-muted-foreground"
+                  >
+                    대기 중인 오버차지가 없습니다.
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                pending.map((o) => (
+                  <tr key={o.id} className="border-t border-border align-top">
+                    <td className="px-5 py-3">
+                      <Link
+                        href={`/admin/orders/${o.id}`}
+                        className="font-mono text-primary hover:underline"
+                      >
+                        {o.id}
+                      </Link>
+                    </td>
+                    <td className="px-5 py-3">{o.name}</td>
+                    <td className="px-5 py-3">{o.gradingCompany}</td>
+                    <td className="px-5 py-3">
+                      {formatCurrency(o.prepaidAmount)}
+                    </td>
+                    <td className="px-5 py-3 font-semibold text-warning">
+                      +{formatCurrency(o.overchargeAmount ?? 0)}
+                    </td>
+                    <td className="px-5 py-3">
+                      {PAYMENT_STATUS_LABELS[o.paymentStatus]}
+                    </td>
+                    <td className="px-5 py-3">
+                      <OverchargeRowActions
+                        orderId={o.id}
+                        initialAmount={o.overchargeAmount ?? 0}
+                      />
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* 모바일 카드 리스트 (md 미만) */}
+        <div className="divide-y divide-border md:hidden">
+          {pending.length === 0 ? (
+            <p className="px-4 py-8 text-center text-sm text-muted-foreground">
+              대기 중인 오버차지가 없습니다.
+            </p>
+          ) : (
+            pending.map((o) => (
+              <div key={o.id} className="px-4 py-3">
+                <div className="flex items-start justify-between gap-2">
+                  <Link
+                    href={`/admin/orders/${o.id}`}
+                    className="font-mono text-sm font-medium text-primary hover:underline"
+                  >
+                    {o.id}
+                  </Link>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {PAYMENT_STATUS_LABELS[o.paymentStatus]}
+                  </span>
+                </div>
+                <div className="mt-1 flex items-baseline justify-between gap-2 text-sm">
+                  <span className="font-medium">{o.name}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {o.gradingCompany}
+                  </span>
+                </div>
+                <div className="mt-1 flex items-baseline justify-between gap-2 text-xs">
+                  <span className="text-muted-foreground">
+                    선결제 {formatCurrency(o.prepaidAmount)}
+                  </span>
+                  <span className="font-semibold text-warning">
+                    +{formatCurrency(o.overchargeAmount ?? 0)}
+                  </span>
+                </div>
+                <div className="mt-2">
+                  <OverchargeRowActions
+                    orderId={o.id}
+                    initialAmount={o.overchargeAmount ?? 0}
+                  />
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
       {/* 오버차지 설정 후보 */}
@@ -138,39 +186,70 @@ export default async function OverchargesPage() {
               있습니다.
             </p>
           </div>
-          <table className="w-full text-sm">
-            <thead className="bg-muted/30 text-left text-xs uppercase text-muted-foreground">
-              <tr>
-                <th className="px-5 py-3">주문번호</th>
-                <th className="px-5 py-3">고객</th>
-                <th className="px-5 py-3">회사</th>
-                <th className="px-5 py-3">선결제</th>
-                <th className="px-5 py-3">오버차지 입력</th>
-              </tr>
-            </thead>
-            <tbody>
-              {setupCandidates.map((o) => (
-                <tr key={o.id} className="border-t border-border align-top">
-                  <td className="px-5 py-3">
-                    <Link
-                      href={`/admin/orders/${o.id}`}
-                      className="font-mono text-primary hover:underline"
-                    >
-                      {o.id}
-                    </Link>
-                  </td>
-                  <td className="px-5 py-3">{o.name}</td>
-                  <td className="px-5 py-3">{o.gradingCompany}</td>
-                  <td className="px-5 py-3">
-                    {formatCurrency(o.prepaidAmount)}
-                  </td>
-                  <td className="px-5 py-3">
-                    <OverchargeRowActions orderId={o.id} initialAmount={0} />
-                  </td>
+          {/* 데스크탑 테이블 (md 이상) */}
+          <div className="hidden overflow-x-auto md:block">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/30 text-left text-xs uppercase text-muted-foreground">
+                <tr>
+                  <th className="px-5 py-3">주문번호</th>
+                  <th className="px-5 py-3">고객</th>
+                  <th className="px-5 py-3">회사</th>
+                  <th className="px-5 py-3">선결제</th>
+                  <th className="px-5 py-3">오버차지 입력</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {setupCandidates.map((o) => (
+                  <tr key={o.id} className="border-t border-border align-top">
+                    <td className="px-5 py-3">
+                      <Link
+                        href={`/admin/orders/${o.id}`}
+                        className="font-mono text-primary hover:underline"
+                      >
+                        {o.id}
+                      </Link>
+                    </td>
+                    <td className="px-5 py-3">{o.name}</td>
+                    <td className="px-5 py-3">{o.gradingCompany}</td>
+                    <td className="px-5 py-3">
+                      {formatCurrency(o.prepaidAmount)}
+                    </td>
+                    <td className="px-5 py-3">
+                      <OverchargeRowActions orderId={o.id} initialAmount={0} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* 모바일 카드 리스트 (md 미만) */}
+          <div className="divide-y divide-border md:hidden">
+            {setupCandidates.map((o) => (
+              <div key={o.id} className="px-4 py-3">
+                <div className="flex items-start justify-between gap-2">
+                  <Link
+                    href={`/admin/orders/${o.id}`}
+                    className="font-mono text-sm font-medium text-primary hover:underline"
+                  >
+                    {o.id}
+                  </Link>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {o.gradingCompany}
+                  </span>
+                </div>
+                <div className="mt-1 flex items-baseline justify-between gap-2 text-sm">
+                  <span className="font-medium">{o.name}</span>
+                  <span className="text-xs text-muted-foreground">
+                    선결제 {formatCurrency(o.prepaidAmount)}
+                  </span>
+                </div>
+                <div className="mt-2">
+                  <OverchargeRowActions orderId={o.id} initialAmount={0} />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -180,35 +259,64 @@ export default async function OverchargesPage() {
           <div className="border-b border-border p-5">
             <h2 className="font-semibold">결제 완료 내역</h2>
           </div>
-          <table className="w-full text-sm">
-            <thead className="bg-muted/30 text-left text-xs uppercase text-muted-foreground">
-              <tr>
-                <th className="px-5 py-3">주문번호</th>
-                <th className="px-5 py-3">고객</th>
-                <th className="px-5 py-3">회사</th>
-                <th className="px-5 py-3">오버차지</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paid.map((o) => (
-                <tr key={o.id} className="border-t border-border">
-                  <td className="px-5 py-3">
-                    <Link
-                      href={`/admin/orders/${o.id}`}
-                      className="font-mono text-primary hover:underline"
-                    >
-                      {o.id}
-                    </Link>
-                  </td>
-                  <td className="px-5 py-3">{o.name}</td>
-                  <td className="px-5 py-3">{o.gradingCompany}</td>
-                  <td className="px-5 py-3 font-semibold text-success">
-                    {formatCurrency(o.overchargeAmount ?? 0)}
-                  </td>
+          {/* 데스크탑 테이블 (md 이상) */}
+          <div className="hidden overflow-x-auto md:block">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/30 text-left text-xs uppercase text-muted-foreground">
+                <tr>
+                  <th className="px-5 py-3">주문번호</th>
+                  <th className="px-5 py-3">고객</th>
+                  <th className="px-5 py-3">회사</th>
+                  <th className="px-5 py-3">오버차지</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {paid.map((o) => (
+                  <tr key={o.id} className="border-t border-border">
+                    <td className="px-5 py-3">
+                      <Link
+                        href={`/admin/orders/${o.id}`}
+                        className="font-mono text-primary hover:underline"
+                      >
+                        {o.id}
+                      </Link>
+                    </td>
+                    <td className="px-5 py-3">{o.name}</td>
+                    <td className="px-5 py-3">{o.gradingCompany}</td>
+                    <td className="px-5 py-3 font-semibold text-success">
+                      {formatCurrency(o.overchargeAmount ?? 0)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* 모바일 카드 리스트 (md 미만) */}
+          <div className="divide-y divide-border md:hidden">
+            {paid.map((o) => (
+              <Link
+                key={o.id}
+                href={`/admin/orders/${o.id}`}
+                className="block px-4 py-3 hover:bg-muted/20 active:bg-muted/40"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <span className="font-mono text-sm font-medium text-primary">
+                    {o.id}
+                  </span>
+                  <span className="shrink-0 text-sm font-semibold text-success">
+                    {formatCurrency(o.overchargeAmount ?? 0)}
+                  </span>
+                </div>
+                <div className="mt-1 flex items-baseline justify-between gap-2 text-xs">
+                  <span className="font-medium">{o.name}</span>
+                  <span className="text-muted-foreground">
+                    {o.gradingCompany}
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
         </div>
       )}
     </div>

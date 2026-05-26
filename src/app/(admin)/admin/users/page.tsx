@@ -41,64 +41,119 @@ export default async function UsersPage() {
       </div>
 
       <div className="overflow-hidden rounded-xl border border-border bg-card">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/30 text-left text-xs uppercase text-muted-foreground">
-            <tr>
-              <th className="px-5 py-3">이름</th>
-              <th className="px-5 py-3">이메일</th>
-              <th className="px-5 py-3">연락처</th>
-              <th className="px-5 py-3">가입 경로</th>
-              <th className="px-5 py-3">주문 수</th>
-              <th className="px-5 py-3">상태</th>
-              <th className="px-5 py-3">가입일</th>
-              <th className="px-5 py-3"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((u) => (
-              <tr key={u.id} className="border-t border-border">
-                <td className="px-5 py-3 font-medium">
-                  {u.name}
-                  {!u.phoneVerified && (
-                    <span className="ml-2 rounded bg-warning/10 px-1.5 py-0.5 text-xs text-warning">
-                      미인증
-                    </span>
-                  )}
-                </td>
-                <td className="px-5 py-3 text-muted-foreground">{u.email}</td>
-                <td className="px-5 py-3">{u.phone}</td>
-                <td className="px-5 py-3 text-muted-foreground">
-                  {u.provider ? PROVIDER_LABELS[u.provider] : "-"}
-                </td>
-                <td className="px-5 py-3">{orderCountByUser[u.id] ?? 0}</td>
-                <td className="px-5 py-3">
-                  {u.isBlocked ? (
-                    <span
-                      className="rounded-md bg-error/10 px-2 py-1 text-xs font-medium text-error"
-                      title={u.blockReason}
-                    >
-                      차단
-                    </span>
-                  ) : (
-                    <span className="rounded-md bg-success/10 px-2 py-1 text-xs font-medium text-success">
-                      활성
-                    </span>
-                  )}
-                </td>
-                <td className="px-5 py-3 text-muted-foreground">
-                  {formatDate(u.createdAt)}
-                </td>
-                <td className="px-5 py-3">
-                  <BlockToggle
-                    userId={u.id}
-                    initialBlocked={u.isBlocked}
-                    initialReason={u.blockReason}
-                  />
-                </td>
+        {/* 데스크탑 테이블 (md 이상) */}
+        <div className="hidden overflow-x-auto md:block">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/30 text-left text-xs uppercase text-muted-foreground">
+              <tr>
+                <th className="px-5 py-3">이름</th>
+                <th className="px-5 py-3">이메일</th>
+                <th className="px-5 py-3">연락처</th>
+                <th className="px-5 py-3">가입 경로</th>
+                <th className="px-5 py-3">주문 수</th>
+                <th className="px-5 py-3">상태</th>
+                <th className="px-5 py-3">가입일</th>
+                <th className="px-5 py-3"></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {users.map((u) => (
+                <tr key={u.id} className="border-t border-border">
+                  <td className="px-5 py-3 font-medium">
+                    {u.name}
+                    {!u.phoneVerified && (
+                      <span className="ml-2 rounded bg-warning/10 px-1.5 py-0.5 text-xs text-warning">
+                        미인증
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-5 py-3 text-muted-foreground">{u.email}</td>
+                  <td className="px-5 py-3">{u.phone}</td>
+                  <td className="px-5 py-3 text-muted-foreground">
+                    {u.provider ? PROVIDER_LABELS[u.provider] : "-"}
+                  </td>
+                  <td className="px-5 py-3">{orderCountByUser[u.id] ?? 0}</td>
+                  <td className="px-5 py-3">
+                    {u.isBlocked ? (
+                      <span
+                        className="rounded-md bg-error/10 px-2 py-1 text-xs font-medium text-error"
+                        title={u.blockReason}
+                      >
+                        차단
+                      </span>
+                    ) : (
+                      <span className="rounded-md bg-success/10 px-2 py-1 text-xs font-medium text-success">
+                        활성
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-5 py-3 text-muted-foreground">
+                    {formatDate(u.createdAt)}
+                  </td>
+                  <td className="px-5 py-3">
+                    <BlockToggle
+                      userId={u.id}
+                      initialBlocked={u.isBlocked}
+                      initialReason={u.blockReason}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* 모바일 카드 리스트 (md 미만) */}
+        <div className="divide-y divide-border md:hidden">
+          {users.map((u) => (
+            <div key={u.id} className="px-4 py-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">
+                    {u.name}
+                    {!u.phoneVerified && (
+                      <span className="ml-2 rounded bg-warning/10 px-1.5 py-0.5 text-[10px] text-warning">
+                        미인증
+                      </span>
+                    )}
+                  </p>
+                  <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                    {u.email}
+                  </p>
+                </div>
+                {u.isBlocked ? (
+                  <span
+                    className="shrink-0 rounded-md bg-error/10 px-2 py-0.5 text-[10px] font-medium text-error"
+                    title={u.blockReason}
+                  >
+                    차단
+                  </span>
+                ) : (
+                  <span className="shrink-0 rounded-md bg-success/10 px-2 py-0.5 text-[10px] font-medium text-success">
+                    활성
+                  </span>
+                )}
+              </div>
+              <div className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                <span>{u.phone}</span>
+                <span className="text-right">{formatDate(u.createdAt)}</span>
+                <span>
+                  {u.provider ? PROVIDER_LABELS[u.provider] : "-"}
+                </span>
+                <span className="text-right">
+                  주문 {orderCountByUser[u.id] ?? 0}건
+                </span>
+              </div>
+              <div className="mt-2">
+                <BlockToggle
+                  userId={u.id}
+                  initialBlocked={u.isBlocked}
+                  initialReason={u.blockReason}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

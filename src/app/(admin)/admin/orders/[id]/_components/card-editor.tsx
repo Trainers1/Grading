@@ -5,14 +5,8 @@ import { useRouter } from "next/navigation";
 import { updateCardDetailsAction } from "@/lib/orders/admin-actions";
 import type { Card } from "@/types";
 
-export function CardEditor({
-  card,
-  index,
-}: {
-  card: Card;
-  /** 카드 행 번호 (주문 내 0-based 인덱스) — 표시용 */
-  index: number;
-}) {
+// 카드 편집 상태/핸들러 공유 훅 — desktop·mobile 두 variant 에서 사용.
+function useCardEditor(card: Card) {
   const router = useRouter();
   const [englishName, setEnglishName] = useState(card.englishName ?? "");
   const [setName, setSetName] = useState(card.setName ?? "");
@@ -70,6 +64,34 @@ export function CardEditor({
     });
   };
 
+  return {
+    englishName,
+    setEnglishName,
+    setName,
+    setSetName,
+    cardNumber,
+    setCardNumber,
+    year,
+    setYear,
+    declaredValue,
+    setDeclaredValue,
+    error,
+    notice,
+    isPending,
+    save,
+  };
+}
+
+export function CardEditor({
+  card,
+  index,
+}: {
+  card: Card;
+  /** 카드 행 번호 (주문 내 0-based 인덱스) — 표시용 */
+  index: number;
+}) {
+  const ed = useCardEditor(card);
+
   return (
     <tr className="border-t border-border align-top">
       <td className="px-5 py-3 text-xs font-mono text-muted-foreground">
@@ -78,40 +100,40 @@ export function CardEditor({
       <td className="px-5 py-3">
         <input
           type="text"
-          value={englishName}
-          onChange={(e) => setEnglishName(e.target.value)}
+          value={ed.englishName}
+          onChange={(e) => ed.setEnglishName(e.target.value)}
           placeholder="영문명 (예: Pikachu)"
-          disabled={isPending}
+          disabled={ed.isPending}
           className="w-full rounded-md border border-border bg-background px-2 py-1 text-sm"
         />
       </td>
       <td className="px-5 py-3">
         <input
           type="text"
-          value={setName}
-          onChange={(e) => setSetName(e.target.value)}
+          value={ed.setName}
+          onChange={(e) => ed.setSetName(e.target.value)}
           placeholder="세트"
-          disabled={isPending}
+          disabled={ed.isPending}
           className="w-full rounded-md border border-border bg-background px-2 py-1 text-sm"
         />
       </td>
       <td className="px-5 py-3">
         <input
           type="text"
-          value={cardNumber}
-          onChange={(e) => setCardNumber(e.target.value)}
+          value={ed.cardNumber}
+          onChange={(e) => ed.setCardNumber(e.target.value)}
           placeholder="번호"
-          disabled={isPending}
+          disabled={ed.isPending}
           className="w-full rounded-md border border-border bg-background px-2 py-1 text-sm"
         />
       </td>
       <td className="px-5 py-3">
         <input
           type="text"
-          value={year}
-          onChange={(e) => setYear(e.target.value)}
+          value={ed.year}
+          onChange={(e) => ed.setYear(e.target.value)}
           placeholder="연도"
-          disabled={isPending}
+          disabled={ed.isPending}
           className="w-full rounded-md border border-border bg-background px-2 py-1 text-sm"
         />
       </td>
@@ -119,10 +141,10 @@ export function CardEditor({
         <input
           type="text"
           inputMode="numeric"
-          value={declaredValue}
-          onChange={(e) => setDeclaredValue(e.target.value)}
+          value={ed.declaredValue}
+          onChange={(e) => ed.setDeclaredValue(e.target.value)}
           placeholder="원"
-          disabled={isPending}
+          disabled={ed.isPending}
           className="w-full rounded-md border border-border bg-background px-2 py-1 text-sm"
         />
       </td>
@@ -139,18 +161,120 @@ export function CardEditor({
         <div className="flex flex-col items-end gap-1">
           <button
             type="button"
-            onClick={save}
-            disabled={isPending}
+            onClick={ed.save}
+            disabled={ed.isPending}
             className="rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
           >
-            {isPending ? "저장 중..." : "저장"}
+            {ed.isPending ? "저장 중..." : "저장"}
           </button>
-          {error && <p className="text-[10px] text-error">{error}</p>}
-          {notice && !error && (
-            <p className="text-[10px] text-success">{notice}</p>
+          {ed.error && <p className="text-[10px] text-error">{ed.error}</p>}
+          {ed.notice && !ed.error && (
+            <p className="text-[10px] text-success">{ed.notice}</p>
           )}
         </div>
       </td>
     </tr>
+  );
+}
+
+// 모바일용 카드 편집기 — div 기반 stacked 레이아웃. 부모는 desktop CardEditor 와 함께 마운트.
+export function CardEditorMobile({
+  card,
+  index,
+}: {
+  card: Card;
+  index: number;
+}) {
+  const ed = useCardEditor(card);
+
+  return (
+    <div className="px-4 py-3">
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-mono text-xs font-medium text-muted-foreground">
+          카드 #{index + 1}
+        </span>
+        {card.gradeResult ? (
+          <span className="rounded-md bg-success/10 px-2 py-0.5 text-xs font-medium text-success">
+            {card.gradeResult}
+          </span>
+        ) : (
+          <span className="text-xs text-muted-foreground">등급 대기 중</span>
+        )}
+      </div>
+
+      <div className="mt-2 space-y-2">
+        <label className="block text-xs">
+          <span className="text-muted-foreground">영문명</span>
+          <input
+            type="text"
+            value={ed.englishName}
+            onChange={(e) => ed.setEnglishName(e.target.value)}
+            placeholder="영문명 (예: Pikachu)"
+            disabled={ed.isPending}
+            className="mt-0.5 w-full rounded-md border border-border bg-background px-2 py-2 text-sm"
+          />
+        </label>
+        <div className="grid grid-cols-2 gap-2">
+          <label className="block text-xs">
+            <span className="text-muted-foreground">세트</span>
+            <input
+              type="text"
+              value={ed.setName}
+              onChange={(e) => ed.setSetName(e.target.value)}
+              placeholder="세트"
+              disabled={ed.isPending}
+              className="mt-0.5 w-full rounded-md border border-border bg-background px-2 py-2 text-sm"
+            />
+          </label>
+          <label className="block text-xs">
+            <span className="text-muted-foreground">번호</span>
+            <input
+              type="text"
+              value={ed.cardNumber}
+              onChange={(e) => ed.setCardNumber(e.target.value)}
+              placeholder="번호"
+              disabled={ed.isPending}
+              className="mt-0.5 w-full rounded-md border border-border bg-background px-2 py-2 text-sm"
+            />
+          </label>
+          <label className="block text-xs">
+            <span className="text-muted-foreground">연도</span>
+            <input
+              type="text"
+              value={ed.year}
+              onChange={(e) => ed.setYear(e.target.value)}
+              placeholder="연도"
+              disabled={ed.isPending}
+              className="mt-0.5 w-full rounded-md border border-border bg-background px-2 py-2 text-sm"
+            />
+          </label>
+          <label className="block text-xs">
+            <span className="text-muted-foreground">신고가액</span>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={ed.declaredValue}
+              onChange={(e) => ed.setDeclaredValue(e.target.value)}
+              placeholder="원"
+              disabled={ed.isPending}
+              className="mt-0.5 w-full rounded-md border border-border bg-background px-2 py-2 text-sm"
+            />
+          </label>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={ed.save}
+        disabled={ed.isPending}
+        className="mt-2 w-full rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+      >
+        {ed.isPending ? "저장 중..." : "저장"}
+      </button>
+      {ed.error && <p className="mt-1 text-xs text-error">{ed.error}</p>}
+      {ed.notice && !ed.error && (
+        <p className="mt-1 text-xs text-success">{ed.notice}</p>
+      )}
+    </div>
   );
 }

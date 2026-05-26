@@ -194,7 +194,7 @@ async function GradingContent({
 
 function ConfirmedTable({ cards }: { cards: CardWithOrder[] }) {
   return (
-    <div className="rounded-xl border border-border bg-card">
+    <div className="overflow-hidden rounded-xl border border-border bg-card">
       <div className="border-b border-border p-5">
         <h2 className="font-semibold">등급 확정 내역</h2>
         <p className="mt-1 text-xs text-muted-foreground">
@@ -203,74 +203,116 @@ function ConfirmedTable({ cards }: { cards: CardWithOrder[] }) {
           자동으로 그레이딩 진행 중 단계로 돌아갑니다.
         </p>
       </div>
-      <table className="w-full text-sm">
-        <thead className="bg-muted/30 text-left text-xs uppercase text-muted-foreground">
-          <tr>
-            <th className="px-5 py-3">주문번호</th>
-            <th className="px-5 py-3">고객</th>
-            <th className="px-5 py-3">회사</th>
-            <th className="px-5 py-3">카드 정보</th>
-            <th className="px-5 py-3">등급 결과</th>
-            <th className="px-5 py-3">일련번호</th>
-            <th className="px-5 py-3 text-right">관리</th>
-          </tr>
-        </thead>
-        <tbody>
-          {cards.length === 0 ? (
-            <tr>
-              <td
-                colSpan={7}
-                className="px-5 py-8 text-center text-muted-foreground"
-              >
-                확정된 등급 결과가 없습니다.
-              </td>
-            </tr>
-          ) : (
-            cards.map((c) => (
-              <tr key={c.id} className="border-t border-border align-top">
-                <td className="px-5 py-3">
-                  <Link
-                    href={`/admin/orders/${c.orderId}`}
-                    className="font-mono text-primary hover:underline"
-                  >
-                    {c.orderId}
-                  </Link>
-                </td>
-                <td className="px-5 py-3">{c.customerName}</td>
-                <td className="px-5 py-3">{c.gradingCompany}</td>
-                <td className="px-5 py-3">
-                  <p className="font-medium">
-                    {[c.englishName, c.setName, c.cardNumber]
-                      .filter(Boolean)
-                      .join(" · ") || "정보 미입력"}
+      {cards.length === 0 ? (
+        <p className="px-5 py-8 text-center text-sm text-muted-foreground">
+          확정된 등급 결과가 없습니다.
+        </p>
+      ) : (
+        <>
+          {/* 데스크탑 테이블 (md 이상) */}
+          <div className="hidden overflow-x-auto md:block">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/30 text-left text-xs uppercase text-muted-foreground">
+                <tr>
+                  <th className="px-5 py-3">주문번호</th>
+                  <th className="px-5 py-3">고객</th>
+                  <th className="px-5 py-3">회사</th>
+                  <th className="px-5 py-3">카드 정보</th>
+                  <th className="px-5 py-3">등급 결과</th>
+                  <th className="px-5 py-3">일련번호</th>
+                  <th className="px-5 py-3 text-right">관리</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cards.map((c) => (
+                  <tr key={c.id} className="border-t border-border align-top">
+                    <td className="px-5 py-3">
+                      <Link
+                        href={`/admin/orders/${c.orderId}`}
+                        className="font-mono text-primary hover:underline"
+                      >
+                        {c.orderId}
+                      </Link>
+                    </td>
+                    <td className="px-5 py-3">{c.customerName}</td>
+                    <td className="px-5 py-3">{c.gradingCompany}</td>
+                    <td className="px-5 py-3">
+                      <p className="font-medium">
+                        {[c.englishName, c.setName, c.cardNumber]
+                          .filter(Boolean)
+                          .join(" · ") || "정보 미입력"}
+                      </p>
+                      <p className="font-mono text-[10px] text-muted-foreground">
+                        ID: {c.id.slice(0, 8)}
+                      </p>
+                    </td>
+                    <td className="px-5 py-3">
+                      <span className="rounded-md bg-success/10 px-2 py-1 font-medium text-success">
+                        {c.gradeResult}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3 font-mono text-xs">
+                      {c.serialNumber ?? "-"}
+                    </td>
+                    <td className="px-5 py-3">
+                      <GradeCancelButton
+                        cardId={c.id}
+                        cardLabel={
+                          [c.englishName, c.setName, c.cardNumber]
+                            .filter(Boolean)
+                            .join(" · ") || `카드 ${c.id.slice(0, 8)}`
+                        }
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* 모바일 카드 리스트 (md 미만) */}
+          <div className="divide-y divide-border md:hidden">
+            {cards.map((c) => {
+              const cardInfo =
+                [c.englishName, c.setName, c.cardNumber]
+                  .filter(Boolean)
+                  .join(" · ") || "정보 미입력";
+              return (
+                <div key={c.id} className="px-4 py-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <Link
+                      href={`/admin/orders/${c.orderId}`}
+                      className="font-mono text-sm font-medium text-primary hover:underline"
+                    >
+                      {c.orderId}
+                    </Link>
+                    <span className="shrink-0 rounded-md bg-success/10 px-2 py-0.5 text-xs font-medium text-success">
+                      {c.gradeResult}
+                    </span>
+                  </div>
+                  <div className="mt-1 flex items-baseline justify-between gap-2 text-sm">
+                    <span className="font-medium">{c.customerName}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {c.gradingCompany}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-sm text-foreground">{cardInfo}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    일련번호:{" "}
+                    <span className="font-mono">{c.serialNumber ?? "-"}</span>
                   </p>
-                  <p className="font-mono text-[10px] text-muted-foreground">
-                    ID: {c.id.slice(0, 8)}
-                  </p>
-                </td>
-                <td className="px-5 py-3">
-                  <span className="rounded-md bg-success/10 px-2 py-1 font-medium text-success">
-                    {c.gradeResult}
-                  </span>
-                </td>
-                <td className="px-5 py-3 font-mono text-xs">
-                  {c.serialNumber ?? "-"}
-                </td>
-                <td className="px-5 py-3">
-                  <GradeCancelButton
-                    cardId={c.id}
-                    cardLabel={
-                      [c.englishName, c.setName, c.cardNumber]
-                        .filter(Boolean)
-                        .join(" · ") || `카드 ${c.id.slice(0, 8)}`
-                    }
-                  />
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+                  <div className="mt-2">
+                    <GradeCancelButton
+                      cardId={c.id}
+                      cardLabel={cardInfo || `카드 ${c.id.slice(0, 8)}`}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
     </div>
   );
 }

@@ -58,7 +58,7 @@ export default async function AdminDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-end justify-between">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">대시보드</h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -98,43 +98,76 @@ export default async function AdminDashboardPage() {
             전체 보기 →
           </Link>
         </div>
-        <table className="w-full text-sm">
-          <thead className="bg-muted/30 text-left text-xs uppercase text-muted-foreground">
-            <tr>
-              <th className="px-5 py-3">주문번호</th>
-              <th className="px-5 py-3">이름</th>
-              <th className="px-5 py-3">회사</th>
-              <th className="px-5 py-3">상태</th>
-              <th className="px-5 py-3">금액</th>
-              <th className="px-5 py-3">접수일</th>
-            </tr>
-          </thead>
-          <tbody>
-            {recentOrders.map((o) => (
-              <tr key={o.id} className="border-t border-border">
-                <td className="px-5 py-3">
-                  <Link
-                    href={`/admin/orders/${o.id}`}
-                    className="font-mono text-primary hover:underline"
-                  >
-                    {o.id}
-                  </Link>
-                </td>
-                <td className="px-5 py-3">{o.name}</td>
-                <td className="px-5 py-3">{o.gradingCompany}</td>
-                <td className="px-5 py-3">
-                  {ORDER_STATUS_LABELS[o.orderStatus]}
-                </td>
-                <td className="px-5 py-3">
-                  {formatCurrency(o.prepaidAmount)}
-                </td>
-                <td className="px-5 py-3 text-muted-foreground">
-                  {formatDate(o.createdAt)}
-                </td>
+        {/* 데스크탑 테이블 (md 이상) */}
+        <div className="hidden overflow-x-auto md:block">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/30 text-left text-xs uppercase text-muted-foreground">
+              <tr>
+                <th className="px-5 py-3">주문번호</th>
+                <th className="px-5 py-3">이름</th>
+                <th className="px-5 py-3">회사</th>
+                <th className="px-5 py-3">상태</th>
+                <th className="px-5 py-3">금액</th>
+                <th className="px-5 py-3">접수일</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {recentOrders.map((o) => (
+                <tr key={o.id} className="border-t border-border">
+                  <td className="px-5 py-3">
+                    <Link
+                      href={`/admin/orders/${o.id}`}
+                      className="font-mono text-primary hover:underline"
+                    >
+                      {o.id}
+                    </Link>
+                  </td>
+                  <td className="px-5 py-3">{o.name}</td>
+                  <td className="px-5 py-3">{o.gradingCompany}</td>
+                  <td className="px-5 py-3">
+                    {ORDER_STATUS_LABELS[o.orderStatus]}
+                  </td>
+                  <td className="px-5 py-3">
+                    {formatCurrency(o.prepaidAmount)}
+                  </td>
+                  <td className="px-5 py-3 text-muted-foreground">
+                    {formatDate(o.createdAt)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* 모바일 카드 리스트 (md 미만) */}
+        <div className="divide-y divide-border md:hidden">
+          {recentOrders.map((o) => (
+            <Link
+              key={o.id}
+              href={`/admin/orders/${o.id}`}
+              className="block px-4 py-3 hover:bg-muted/20 active:bg-muted/40"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <span className="font-mono text-sm font-medium text-primary">
+                  {o.id}
+                </span>
+                <span className="shrink-0 text-xs text-muted-foreground">
+                  {formatDate(o.createdAt)}
+                </span>
+              </div>
+              <div className="mt-1 flex items-baseline justify-between gap-2 text-sm">
+                <span className="font-medium">{o.name}</span>
+                <span className="text-foreground">
+                  {formatCurrency(o.prepaidAmount)}
+                </span>
+              </div>
+              <div className="mt-0.5 flex items-baseline justify-between gap-2 text-xs text-muted-foreground">
+                <span>{o.gradingCompany}</span>
+                <span>{ORDER_STATUS_LABELS[o.orderStatus]}</span>
+              </div>
+            </Link>
+          ))}
+        </div>
       </div>
 
       {/* 회원 요약 */}

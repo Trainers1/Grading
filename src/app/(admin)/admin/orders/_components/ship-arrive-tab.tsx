@@ -250,7 +250,8 @@ export function ShipArriveTab({
                       {groupOrders.length}건
                     </span>
                   </header>
-                  <table className="w-full text-sm">
+                  {/* 데스크탑 테이블 (md 이상) */}
+                  <table className="hidden w-full text-sm md:table">
                     <thead className="bg-muted/10 text-left text-xs uppercase text-muted-foreground">
                       <tr>
                         <th className="w-10 px-3 py-2"></th>
@@ -300,6 +301,51 @@ export function ShipArriveTab({
                       })}
                     </tbody>
                   </table>
+
+                  {/* 모바일 카드 리스트 (md 미만) */}
+                  <div className="divide-y divide-border md:hidden">
+                    {groupOrders.map((o) => {
+                      const checked = selected.has(o.id);
+                      return (
+                        <div
+                          key={o.id}
+                          className={`flex items-start gap-3 px-4 py-3 ${
+                            checked ? "bg-primary/5" : ""
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            aria-label={`${o.id} 선택`}
+                            checked={checked}
+                            onChange={() => toggleOne(o.id)}
+                            disabled={isPending}
+                            className="mt-1"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2">
+                              <Link
+                                href={`/admin/orders/${o.id}`}
+                                className="font-mono text-sm font-medium text-primary hover:underline"
+                              >
+                                {o.id}
+                              </Link>
+                              <span className="shrink-0 text-xs text-muted-foreground">
+                                {formatDate(o.createdAt)}
+                              </span>
+                            </div>
+                            <div className="mt-1 flex items-baseline justify-between gap-2 text-sm">
+                              <span className="font-medium">{o.name}</span>
+                              <span className="text-foreground">
+                                {formatCurrency(
+                                  o.prepaidAmount + (o.overchargeAmount ?? 0)
+                                )}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </section>
               );
             })}
