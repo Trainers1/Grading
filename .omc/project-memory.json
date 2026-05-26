@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1779631601113,
-  "projectRoot": "D:\\Trainers\\Grading\\trainers-grading",
+  "lastScanned": 1779726430873,
+  "projectRoot": "d:\\Trainers\\Grading\\trainers-grading",
   "techStack": {
     "languages": [
       {
@@ -42,7 +42,7 @@
     "runtime": null
   },
   "build": {
-    "buildCommand": "pnpm build 2>&1 | tail -40",
+    "buildCommand": "pnpm build 2>&1 | tee build.log",
     "testCommand": null,
     "lintCommand": "pnpm lint",
     "devCommand": "pnpm dev",
@@ -78,7 +78,7 @@
       "path": "docs",
       "purpose": "Documentation",
       "fileCount": 2,
-      "lastAccessed": 1779631601056,
+      "lastAccessed": 1779726430808,
       "keyFiles": [
         "db-schema.md",
         "TODOS.md"
@@ -88,7 +88,7 @@
       "path": "public",
       "purpose": "Public files",
       "fileCount": 2,
-      "lastAccessed": 1779631601065,
+      "lastAccessed": 1779726430818,
       "keyFiles": [
         "AGENTS.md",
         "sw.js"
@@ -98,7 +98,7 @@
       "path": "scripts",
       "purpose": "Build/utility scripts",
       "fileCount": 4,
-      "lastAccessed": 1779631601066,
+      "lastAccessed": 1779726430818,
       "keyFiles": [
         "generate-placeholder-icons.ps1",
         "smoke-auth.mjs",
@@ -110,7 +110,7 @@
       "path": "src",
       "purpose": "Source code",
       "fileCount": 2,
-      "lastAccessed": 1779631601066,
+      "lastAccessed": 1779726430819,
       "keyFiles": [
         "AGENTS.md",
         "middleware.ts"
@@ -120,7 +120,7 @@
       "path": "supabase",
       "purpose": null,
       "fileCount": 1,
-      "lastAccessed": 1779631601067,
+      "lastAccessed": 1779726430820,
       "keyFiles": [
         "AGENTS.md"
       ]
@@ -129,7 +129,7 @@
       "path": "src\\app",
       "purpose": "Application code",
       "fileCount": 4,
-      "lastAccessed": 1779631601068,
+      "lastAccessed": 1779726430823,
       "keyFiles": [
         "AGENTS.md",
         "globals.css",
@@ -140,7 +140,7 @@
       "path": "src\\components",
       "purpose": "UI components",
       "fileCount": 1,
-      "lastAccessed": 1779631601069,
+      "lastAccessed": 1779726430826,
       "keyFiles": [
         "AGENTS.md"
       ]
@@ -149,7 +149,7 @@
       "path": "src\\lib",
       "purpose": "Library code",
       "fileCount": 3,
-      "lastAccessed": 1779631601069,
+      "lastAccessed": 1779726430828,
       "keyFiles": [
         "address.ts",
         "AGENTS.md",
@@ -160,7 +160,7 @@
       "path": "src\\types",
       "purpose": "Type definitions",
       "fileCount": 7,
-      "lastAccessed": 1779631601070,
+      "lastAccessed": 1779726430831,
       "keyFiles": [
         "AGENTS.md",
         "apply-form.ts",
@@ -171,25 +171,88 @@
       "path": "supabase\\migrations",
       "purpose": "Database migrations",
       "fileCount": 21,
-      "lastAccessed": 1779631601071,
+      "lastAccessed": 1779726430836,
       "keyFiles": [
         "001_initial_schema.sql",
         "002_redesign.sql",
         "003_pwa_push.sql"
       ]
+    },
+    "supabase\\scripts": {
+      "path": "supabase\\scripts",
+      "purpose": "Build/utility scripts",
+      "fileCount": 1,
+      "lastAccessed": 1779726430837,
+      "keyFiles": [
+        "reset_orders_and_cards.sql"
+      ]
     }
   },
   "hotPaths": [
     {
-      "path": "src\\app\\(admin)\\admin\\orders\\page.tsx",
-      "accessCount": 8,
-      "lastAccessed": 1779632171936,
+      "path": "src",
+      "accessCount": 14,
+      "lastAccessed": 1779807070606,
+      "type": "directory"
+    },
+    {
+      "path": "src\\lib\\orders\\admin-actions.ts",
+      "accessCount": 12,
+      "lastAccessed": 1779807084451,
       "type": "file"
     },
     {
       "path": "src\\app\\(admin)\\admin\\orders\\_components\\card-info-entry-tab.tsx",
+      "accessCount": 10,
+      "lastAccessed": 1779674165213,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\(admin)\\admin\\orders\\page.tsx",
+      "accessCount": 9,
+      "lastAccessed": 1779673603208,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\(admin)\\admin\\orders\\[id]\\_components\\card-editor.tsx",
+      "accessCount": 9,
+      "lastAccessed": 1779804074106,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\(admin)\\admin\\orders\\[id]\\page.tsx",
       "accessCount": 8,
-      "lastAccessed": 1779634224121,
+      "lastAccessed": 1779804239098,
+      "type": "file"
+    },
+    {
+      "path": "src\\constants\\grading.ts",
+      "accessCount": 8,
+      "lastAccessed": 1779805112584,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\(admin)\\admin\\orders\\_components\\pending-shipment-cards-tab.tsx",
+      "accessCount": 7,
+      "lastAccessed": 1779674023837,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\admin\\admin-sidebar.tsx",
+      "accessCount": 6,
+      "lastAccessed": 1779673296016,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\(user)\\mypage\\orders\\_components\\my-orders-list.tsx",
+      "accessCount": 6,
+      "lastAccessed": 1779803255570,
+      "type": "file"
+    },
+    {
+      "path": "src\\types\\order.ts",
+      "accessCount": 6,
+      "lastAccessed": 1779805338816,
       "type": "file"
     },
     {
@@ -199,39 +262,111 @@
       "type": "file"
     },
     {
-      "path": "src\\app\\(admin)\\admin\\orders\\_components\\pending-shipment-cards-tab.tsx",
-      "accessCount": 5,
-      "lastAccessed": 1779634614594,
-      "type": "file"
-    },
-    {
-      "path": "src\\components\\admin\\admin-sidebar.tsx",
-      "accessCount": 5,
-      "lastAccessed": 1779637937608,
-      "type": "file"
-    },
-    {
       "path": "src\\app\\layout.tsx",
+      "accessCount": 5,
+      "lastAccessed": 1779673318015,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\(admin)\\admin\\orders\\_components\\all-orders-tab.tsx",
+      "accessCount": 5,
+      "lastAccessed": 1779673859657,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\user\\user-header.tsx",
+      "accessCount": 5,
+      "lastAccessed": 1779803208825,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\manifest.ts",
+      "accessCount": 5,
+      "lastAccessed": 1779805121757,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\user\\user-footer.tsx",
       "accessCount": 4,
-      "lastAccessed": 1779637948294,
+      "lastAccessed": 1779673611622,
       "type": "file"
     },
     {
-      "path": "src\\constants\\grading.ts",
+      "path": "src\\app\\(admin)\\admin\\orders\\_components\\intake-management-tab.tsx",
+      "accessCount": 4,
+      "lastAccessed": 1779673968586,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\(admin)\\admin\\orders\\_components\\ship-arrive-tab.tsx",
+      "accessCount": 4,
+      "lastAccessed": 1779673992685,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\(admin)\\admin\\(dashboard)\\page.tsx",
+      "accessCount": 4,
+      "lastAccessed": 1779674439289,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\(admin)\\admin\\orders\\_components\\cancelled-orders-tab.tsx",
+      "accessCount": 4,
+      "lastAccessed": 1779802582994,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\(user)\\page.tsx",
+      "accessCount": 4,
+      "lastAccessed": 1779803105542,
+      "type": "file"
+    },
+    {
+      "path": "src\\lib\\auth\\require-admin.ts",
+      "accessCount": 4,
+      "lastAccessed": 1779805071761,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\admin\\admin-shell.tsx",
       "accessCount": 3,
-      "lastAccessed": 1779634885676,
+      "lastAccessed": 1779673295554,
       "type": "file"
     },
     {
-      "path": "src\\app\\(user)\\mypage\\orders\\_components\\my-orders-list.tsx",
+      "path": "src\\app\\(admin)\\admin\\layout.tsx",
       "accessCount": 3,
-      "lastAccessed": 1779635796880,
+      "lastAccessed": 1779673378471,
       "type": "file"
     },
     {
-      "path": "src\\types\\order.ts",
-      "accessCount": 2,
-      "lastAccessed": 1779631681860,
+      "path": "src\\app\\(admin)\\admin\\orders\\_components\\pickup-complete-tab.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1779673890512,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\(admin)\\admin\\overcharges\\page.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1779674505907,
+      "type": "file"
+    },
+    {
+      "path": "supabase\\migrations\\001_initial_schema.sql",
+      "accessCount": 3,
+      "lastAccessed": 1779805094201,
+      "type": "file"
+    },
+    {
+      "path": "supabase\\migrations",
+      "accessCount": 3,
+      "lastAccessed": 1779805103695,
+      "type": "directory"
+    },
+    {
+      "path": "supabase\\migrations\\002_redesign.sql",
+      "accessCount": 3,
+      "lastAccessed": 1779805123534,
       "type": "file"
     },
     {
@@ -253,99 +388,27 @@
       "type": "file"
     },
     {
-      "path": "src\\app\\(user)\\page.tsx",
-      "accessCount": 2,
-      "lastAccessed": 1779634910981,
-      "type": "file"
-    },
-    {
-      "path": "supabase\\migrations\\001_initial_schema.sql",
-      "accessCount": 2,
-      "lastAccessed": 1779636271706,
-      "type": "file"
-    },
-    {
-      "path": "supabase\\migrations\\002_redesign.sql",
-      "accessCount": 2,
-      "lastAccessed": 1779636272665,
-      "type": "file"
-    },
-    {
-      "path": "supabase\\migrations",
-      "accessCount": 2,
-      "lastAccessed": 1779636281873,
-      "type": "directory"
-    },
-    {
       "path": "supabase\\migrations\\003_pwa_push.sql",
       "accessCount": 2,
       "lastAccessed": 1779636299198,
       "type": "file"
     },
     {
-      "path": "src\\components\\user\\user-footer.tsx",
+      "path": "src\\app\\(user)\\mypage\\orders\\page.tsx",
       "accessCount": 2,
-      "lastAccessed": 1779637232197,
+      "lastAccessed": 1779673613994,
       "type": "file"
     },
     {
-      "path": "src\\lib\\auth\\require-admin.ts",
+      "path": "src\\app\\(admin)\\admin\\users\\page.tsx",
       "accessCount": 2,
-      "lastAccessed": 1779637807878,
-      "type": "file"
-    },
-    {
-      "path": "src\\app\\manifest.ts",
-      "accessCount": 2,
-      "lastAccessed": 1779637822379,
-      "type": "file"
-    },
-    {
-      "path": "src\\components\\user\\user-header.tsx",
-      "accessCount": 2,
-      "lastAccessed": 1779637888939,
-      "type": "file"
-    },
-    {
-      "path": "src\\components\\admin\\admin-shell.tsx",
-      "accessCount": 2,
-      "lastAccessed": 1779637917308,
-      "type": "file"
-    },
-    {
-      "path": "src\\app\\(admin)\\admin\\orders\\_components\\ship-arrive-tab.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1779631690964,
+      "lastAccessed": 1779674420081,
       "type": "file"
     },
     {
       "path": "package.json",
       "accessCount": 1,
       "lastAccessed": 1779631705866,
-      "type": "file"
-    },
-    {
-      "path": "src\\app\\(admin)\\admin\\orders\\_components\\all-orders-tab.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1779631744922,
-      "type": "file"
-    },
-    {
-      "path": "src",
-      "accessCount": 1,
-      "lastAccessed": 1779634834865,
-      "type": "directory"
-    },
-    {
-      "path": "src\\lib\\orders\\admin-actions.ts",
-      "accessCount": 1,
-      "lastAccessed": 1779634846049,
-      "type": "file"
-    },
-    {
-      "path": "src\\app\\(user)\\mypage\\orders\\page.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1779635747995,
       "type": "file"
     },
     {
@@ -385,12 +448,6 @@
       "type": "file"
     },
     {
-      "path": "src\\app\\(admin)\\admin\\layout.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1779637232892,
-      "type": "file"
-    },
-    {
       "path": "src\\components\\user\\mobile-menu.tsx",
       "accessCount": 1,
       "lastAccessed": 1779637866398,
@@ -400,6 +457,36 @@
       "path": "C:\\Users\\user\\AppData\\Local\\Temp\\claude\\D--Trainers-Grading-trainers-grading\\6bcb3258-2364-41d9-bb3b-544183f95e61\\tasks\\bqfkzu1h4.output",
       "accessCount": 1,
       "lastAccessed": 1779637982512,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\(admin)\\admin\\manifest.webmanifest\\route.ts",
+      "accessCount": 1,
+      "lastAccessed": 1779673358482,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\(user)\\apply\\page.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1779673612368,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\(admin)\\admin\\orders\\[id]\\receive\\page.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1779674213443,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\(admin)\\admin\\settings\\page.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1779674376069,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\(admin)\\admin\\my-account\\page.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1779674376142,
       "type": "file"
     }
   ],
