@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { signInAction } from "@/lib/auth/actions";
+import { safeRedirectOrFallback } from "@/lib/auth/redirect";
 
 export default function LoginPage() {
   return (
@@ -19,7 +20,8 @@ export default function LoginPage() {
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get("redirect") ?? "/";
+  // Open Redirect 방어 — 외부 URL/프로토콜은 "/" 로 폴백.
+  const redirect = safeRedirectOrFallback(searchParams.get("redirect"), "/");
   const registered = searchParams.get("registered");
 
   const [email, setEmail] = useState("");

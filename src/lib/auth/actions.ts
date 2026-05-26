@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { safeRedirectOrFallback } from "@/lib/auth/redirect";
 
 export type ExpectedRole = "customer" | "admin";
 
@@ -152,7 +153,11 @@ export async function signInAction(params: {
   }
 
   const fallback = params.expectedRole === "admin" ? "/admin" : "/";
-  return { ok: true, redirectTo: params.redirectTo || fallback };
+  // Open Redirect 방어 — 외부 URL/스킴-relative 경로는 fallback 으로 강제.
+  return {
+    ok: true,
+    redirectTo: safeRedirectOrFallback(params.redirectTo, fallback),
+  };
 }
 
 export async function signUpAction(params: {

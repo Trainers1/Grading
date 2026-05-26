@@ -8,7 +8,9 @@ function enforceAccess(
 ): NextResponse {
   const { pathname } = request.nextUrl;
   const isProtectedUserPath =
-    pathname.startsWith("/apply") || pathname.startsWith("/mypage");
+    pathname.startsWith("/apply") ||
+    pathname.startsWith("/mypage") ||
+    pathname.startsWith("/pay");
   const isAdminPath =
     pathname.startsWith("/admin") && !pathname.startsWith("/admin/login");
 
