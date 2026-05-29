@@ -68,7 +68,7 @@ export function MobileMenu({ displayName, isAdmin }: MobileMenuProps) {
           <div
             className={cn(
               "absolute right-0 top-0 flex h-full w-72 max-w-[85vw] flex-col bg-background shadow-xl",
-              "pt-[env(safe-area-inset-top)]"
+              "pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)]"
             )}
           >
             <div className="flex h-16 items-center justify-between border-b border-border px-4">

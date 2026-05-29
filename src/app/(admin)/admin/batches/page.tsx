@@ -125,7 +125,7 @@ export default async function BatchesPage() {
                 </div>
                 <p className="mt-1 text-sm font-medium">{order.name}</p>
                 <p className="text-xs text-muted-foreground">{order.phone}</p>
-                <p className="mt-2 text-xs text-muted-foreground">
+                <p className="mt-2 break-words text-xs text-muted-foreground">
                   배송지:{" "}
                   {displayShippingAddress(
                     order,
@@ -199,7 +199,7 @@ export default async function BatchesPage() {
                       <p className="text-xs text-muted-foreground">
                         {head.phone}
                       </p>
-                      <p className="mt-2 text-xs text-muted-foreground">
+                      <p className="mt-2 break-words text-xs text-muted-foreground">
                         배송지:{" "}
                         {displayShippingAddress(
                           head,
@@ -286,7 +286,7 @@ export default async function BatchesPage() {
                           {head.userTrackingNumber}
                         </span>
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="break-words text-xs text-muted-foreground">
                         배송지:{" "}
                         {displayShippingAddress(head, profileAddresses, "-")}
                         {head.addressSource === "MY" && (

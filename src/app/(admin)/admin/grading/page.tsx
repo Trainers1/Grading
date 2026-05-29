@@ -98,18 +98,18 @@ async function GradingContent({
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-xl border border-border bg-card p-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="rounded-xl border border-border bg-card p-3 sm:p-5">
           <p className="text-sm text-muted-foreground">전체 카드</p>
           <p className="mt-2 text-3xl font-bold">{allCards.length}</p>
         </div>
-        <div className="rounded-xl border border-border bg-card p-5">
+        <div className="rounded-xl border border-border bg-card p-3 sm:p-5">
           <p className="text-sm text-muted-foreground">일련번호 대기</p>
           <p className="mt-2 text-3xl font-bold text-warning">
             {pending.length}
           </p>
         </div>
-        <div className="rounded-xl border border-border bg-card p-5">
+        <div className="rounded-xl border border-border bg-card p-3 sm:p-5">
           <p className="text-sm text-muted-foreground">일련번호 입력 완료</p>
           <p className="mt-2 text-3xl font-bold text-success">
             {graded.length}

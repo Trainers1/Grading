@@ -178,7 +178,7 @@ export function PendingShipmentCardsTab({
       <OrderFilterToolbar state={state} onChange={setState} />
 
       <div className="rounded-xl border border-border bg-card">
-        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border p-5">
+        <div className="flex flex-col gap-3 border-b border-border p-5 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h2 className="font-semibold">출고 대기 카드 (접수 완료 → 출고 전)</h2>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -199,7 +199,7 @@ export function PendingShipmentCardsTab({
             type="button"
             onClick={exportAll}
             disabled={filtered.length === 0}
-            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full shrink-0 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
           >
             전체 엑셀 내보내기
           </button>
@@ -236,8 +236,8 @@ function GroupSection({
 }) {
   return (
     <section>
-      <header className="flex flex-wrap items-center justify-between gap-3 bg-muted/20 px-5 py-3">
-        <div className="flex items-center gap-2">
+      <header className="flex flex-col gap-2 bg-muted/20 px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm font-semibold">{group.company}</span>
           <span className="text-xs text-muted-foreground">
             · {serviceLabel(group.company, group.serviceLevel)}
@@ -249,7 +249,7 @@ function GroupSection({
         <button
           type="button"
           onClick={onExport}
-          className="rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted/40"
+          className="w-full shrink-0 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted/40 sm:w-auto"
         >
           이 그룹 엑셀 내보내기
         </button>

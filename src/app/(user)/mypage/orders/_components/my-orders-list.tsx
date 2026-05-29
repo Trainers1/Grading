@@ -99,15 +99,15 @@ export function MyOrdersList({ orders }: { orders: Order[] }) {
       <h1 className="text-2xl font-bold">신청 내역</h1>
 
       <div className="mt-6 grid grid-cols-3 gap-3">
-        <div className="rounded-lg border border-border bg-card p-4 text-center">
+        <div className="rounded-lg border border-border bg-card p-3 sm:p-4 text-center">
           <p className="text-2xl font-bold text-primary">{counts.inProgress}</p>
           <p className="mt-1 text-xs text-muted-foreground">진행중</p>
         </div>
-        <div className="rounded-lg border border-border bg-card p-4 text-center">
+        <div className="rounded-lg border border-border bg-card p-3 sm:p-4 text-center">
           <p className="text-2xl font-bold text-success">{counts.pickupReady}</p>
           <p className="mt-1 text-xs text-muted-foreground">수령 대기</p>
         </div>
-        <div className="rounded-lg border border-border bg-card p-4 text-center">
+        <div className="rounded-lg border border-border bg-card p-3 sm:p-4 text-center">
           <p className="text-2xl font-bold text-muted-foreground">
             {counts.completed}
           </p>

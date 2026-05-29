@@ -42,7 +42,13 @@ export async function UserHeader() {
       className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur"
       style={{ paddingTop: "env(safe-area-inset-top)" }}
     >
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
+      <div
+        className="mx-auto flex h-16 max-w-7xl items-center justify-between"
+        style={{
+          paddingLeft: "max(1rem, env(safe-area-inset-left))",
+          paddingRight: "max(1rem, env(safe-area-inset-right))",
+        }}
+      >
         <Link href="/" className="text-xl font-bold text-primary">
           TRAINERS
         </Link>

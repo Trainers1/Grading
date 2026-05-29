@@ -8,6 +8,7 @@ import {
   getPaymentCountsForOrders,
 } from "@/lib/orders/queries";
 import { requireAdmin } from "@/lib/auth/require-admin";
+import { cn } from "@/lib/utils";
 import type { Order } from "@/types";
 import { IntakeManagementTab } from "./_components/intake-management-tab";
 import { CardInfoEntryTab } from "./_components/card-info-entry-tab";
@@ -98,50 +99,52 @@ async function OrdersContent({
         </p>
       </div>
 
-      <div className="flex flex-wrap gap-1 border-b border-border">
-        <TabLink
-          href="/admin/orders?view=intake"
-          active={view === "intake"}
-          label="접수 관리"
-          count={intakeOrders.length}
-        />
-        <TabLink
-          href="/admin/orders?view=cardinfo"
-          active={view === "cardinfo"}
-          label="카드 정보 작성"
-          count={cardInfoOrders.length}
-        />
-        <TabLink
-          href="/admin/orders?view=pendingship"
-          active={view === "pendingship"}
-          label="출고 대기 카드"
-          count={shipOrders.length}
-        />
-        <TabLink
-          href="/admin/orders?view=shipping"
-          active={view === "shipping"}
-          label="출고/입고"
-          count={shipOrders.length + arriveOrders.length}
-        />
-        <TabLink
-          href="/admin/orders?view=pickup"
-          active={view === "pickup"}
-          label="수령 완료"
-          count={pickupOrders.length}
-        />
-        <TabLink
-          href="/admin/orders?view=all"
-          active={view === "all"}
-          label="전체"
-          count={allActive.length}
-        />
-        <TabLink
-          href="/admin/orders?view=cancelled"
-          active={view === "cancelled"}
-          label="취소됨"
-          count={cancelledOrders.length}
-          danger
-        />
+      <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+        <div className="flex min-w-max gap-1 border-b border-border sm:min-w-0 sm:flex-wrap">
+          <TabLink
+            href="/admin/orders?view=intake"
+            active={view === "intake"}
+            label="접수 관리"
+            count={intakeOrders.length}
+          />
+          <TabLink
+            href="/admin/orders?view=cardinfo"
+            active={view === "cardinfo"}
+            label="카드 정보 작성"
+            count={cardInfoOrders.length}
+          />
+          <TabLink
+            href="/admin/orders?view=pendingship"
+            active={view === "pendingship"}
+            label="출고 대기 카드"
+            count={shipOrders.length}
+          />
+          <TabLink
+            href="/admin/orders?view=shipping"
+            active={view === "shipping"}
+            label="출고/입고"
+            count={shipOrders.length + arriveOrders.length}
+          />
+          <TabLink
+            href="/admin/orders?view=pickup"
+            active={view === "pickup"}
+            label="수령 완료"
+            count={pickupOrders.length}
+          />
+          <TabLink
+            href="/admin/orders?view=all"
+            active={view === "all"}
+            label="전체"
+            count={allActive.length}
+          />
+          <TabLink
+            href="/admin/orders?view=cancelled"
+            active={view === "cancelled"}
+            label="취소됨"
+            count={cancelledOrders.length}
+            danger
+          />
+        </div>
       </div>
 
       {view === "intake" && <IntakeManagementTab orders={intakeOrders} />}
@@ -196,14 +199,25 @@ function TabLink({
   return (
     <Link
       href={href}
-      className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
+      className={`-mb-px whitespace-nowrap border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
         active
           ? activeCls
           : "border-transparent text-muted-foreground hover:text-foreground"
       }`}
     >
-      {label}{" "}
-      <span className="ml-1 text-xs text-muted-foreground">({count})</span>
+      {label}
+      <span
+        className={cn(
+          "ml-1.5 inline-flex min-w-[1.25rem] justify-center rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular-nums",
+          count === 0
+            ? "bg-muted text-muted-foreground"
+            : danger
+            ? "bg-error/10 text-error"
+            : "bg-primary/10 text-primary"
+        )}
+      >
+        {count}
+      </span>
     </Link>
   );
 }

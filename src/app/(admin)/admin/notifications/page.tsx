@@ -117,8 +117,8 @@ export default async function NotificationsMonitorPage() {
       </div>
 
       {/* 요약 지표 */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-xl border border-border bg-card p-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="rounded-xl border border-border bg-card p-3 sm:p-5">
           <p className="text-sm text-muted-foreground">실패율 (24h)</p>
           <p
             className={`mt-2 text-3xl font-bold ${
@@ -132,7 +132,7 @@ export default async function NotificationsMonitorPage() {
           </p>
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-5">
+        <div className="rounded-xl border border-border bg-card p-3 sm:p-5">
           <p className="text-sm text-muted-foreground">마지막 성공 발송</p>
           <p
             className={`mt-2 text-base font-semibold ${
@@ -153,7 +153,7 @@ export default async function NotificationsMonitorPage() {
           )}
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-5">
+        <div className="rounded-xl border border-border bg-card p-3 sm:p-5">
           <p className="text-sm text-muted-foreground">실패 행 수 (24h)</p>
           <p
             className={`mt-2 text-3xl font-bold ${

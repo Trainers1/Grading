@@ -41,7 +41,7 @@ export function StepIndicator({ currentStep }: StepIndicatorProps) {
             </div>
             <span
               className={cn(
-                "mt-2 text-xs font-medium text-center",
+                "mt-2 text-center text-[10px] font-medium sm:text-xs",
                 step <= currentStep
                   ? "text-primary"
                   : "text-muted-foreground"

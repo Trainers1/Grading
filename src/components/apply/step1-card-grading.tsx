@@ -119,7 +119,7 @@ export function Step1CardGrading({ data, onChange, services }: Step1Props) {
                       })
                     }
                     className={cn(
-                      "cursor-pointer rounded-lg border-2 p-2 text-sm font-bold transition-all hover:border-primary",
+                      "cursor-pointer rounded-lg border-2 p-3 text-sm font-bold transition-all hover:border-primary sm:p-2",
                       group.gradingCompany === c.value
                         ? "border-primary bg-primary/5"
                         : "border-border"
@@ -237,7 +237,7 @@ export function Step1CardGrading({ data, onChange, services }: Step1Props) {
                   매수만큼 모든 슬롯을 업로드해 주세요
                 </span>
               </Label>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
                 {group.frontImages.map((file, slotIdx) => (
                   <CardImageSlot
                     key={`${group.id}-slot-${slotIdx}`}

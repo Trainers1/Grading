@@ -122,7 +122,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="mx-auto max-w-md px-4 py-12">
+    <div className="mx-auto max-w-md px-4 py-8 sm:py-12">
       <div className="text-center">
         <h1 className="text-2xl font-bold">회원가입</h1>
         <p className="mt-2 text-sm text-muted-foreground">

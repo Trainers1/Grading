@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
-import { GRADING_COMPANIES } from "@/constants/grading";
+import { GradingCompaniesSection } from "@/components/user/grading-companies-section";
 
 export default function HomePage() {
   return (
@@ -8,7 +8,7 @@ export default function HomePage() {
       {/* 히어로 */}
       <section className="bg-primary py-20 text-primary-foreground">
         <div className="mx-auto max-w-4xl px-4 text-center">
-          <h1 className="text-4xl font-bold sm:text-5xl">
+          <h1 className="text-4xl font-bold leading-tight sm:text-5xl">
             트레이딩 카드
             <br />
             그레이딩 대행 서비스
@@ -32,15 +32,15 @@ export default function HomePage() {
           <h2 className="text-center text-2xl font-bold">
             간편한 그레이딩 대행 프로세스
           </h2>
-          <div className="mt-10 grid gap-6 grid-cols-2 sm:grid-cols-4 lg:grid-cols-7">
+          <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-4 sm:gap-6 lg:grid-cols-7">
             {[
               { step: "01", title: "온라인 신청", desc: "웹에서 신청서 작성 및 결제" },
               { step: "02", title: "카드 전달", desc: "매장 방문 또는 택배 발송 (선택)" },
-              { step: "03", title: "출고", desc: "월말 일괄로 국내 총판에 출고" },
-              { step: "04", title: "해외 발송", desc: "총판에서 그레이딩 업체로 발송" },
+              { step: "03", title: "출고", desc: "월말에 카드를 일괄 출고" },
+              { step: "04", title: "해외 발송", desc: "해외 그레이딩 업체로 발송" },
               { step: "05", title: "등급 확정", desc: "그레이딩 업체 심사 완료" },
-              { step: "06", title: "입고", desc: "그레이딩 완료 후 총판으로 입고" },
-              { step: "07", title: "카드 수령", desc: "총판 → 매장 전달 후 고객 수령" },
+              { step: "06", title: "입고", desc: "그레이딩 완료 후 국내로 입고" },
+              { step: "07", title: "카드 수령", desc: "매장 전달 후 고객 수령" },
             ].map((item) => (
               <div key={item.step} className="text-center">
                 <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-lg font-bold text-primary">
@@ -62,27 +62,10 @@ export default function HomePage() {
           <h2 className="text-center text-2xl font-bold">
             지원 그레이딩사
           </h2>
-          <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-4">
-            {GRADING_COMPANIES.map((company) => (
-              <a
-                key={company.value}
-                href={company.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group rounded-xl border border-border bg-card p-6 text-center transition hover:border-primary hover:shadow-md"
-              >
-                <p className="text-2xl font-bold text-primary">
-                  {company.label}
-                </p>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  {company.description}
-                </p>
-                <p className="mt-2 text-[11px] text-muted-foreground/70 group-hover:text-primary">
-                  공식 홈페이지 ↗
-                </p>
-              </a>
-            ))}
-          </div>
+          <GradingCompaniesSection />
+          <p className="mt-4 text-center text-xs text-muted-foreground">
+            로고를 누르면 그레이딩사 안내와 공식 홈페이지를 확인하실 수 있습니다.
+          </p>
         </div>
       </section>
 
@@ -106,7 +89,7 @@ export default function HomePage() {
               },
               {
                 q: "신청 후 취소가 가능한가요?",
-                a: "총판(카드하비) 발송 전까지 전액 환불이 가능합니다. 총판 발송 이후에는 취소 및 환불이 불가합니다.",
+                a: "월말 일괄 출고 전까지 전액 환불이 가능합니다. 출고 이후에는 취소 및 환불이 불가합니다.",
               },
               {
                 q: "오버차지란 무엇인가요?",

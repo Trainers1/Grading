@@ -262,7 +262,7 @@ export function ApplyForm({
         )}
       </div>
 
-      <div className="mt-6 flex justify-between">
+      <div className="mt-6 flex justify-between gap-2">
         <Button
           type="button"
           variant="outline"
@@ -374,7 +374,7 @@ function SummaryRow({
   value: React.ReactNode;
 }) {
   return (
-    <div className="flex justify-between">
+    <div className="flex flex-col gap-0.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
       <span className="text-muted-foreground">{label}</span>
       <span>{value}</span>
     </div>

@@ -203,7 +203,7 @@ export function OrderDetailClient({
       <h1 className="mt-4 text-2xl font-bold">주문 상세</h1>
 
       <div className="mt-6 rounded-xl border border-border bg-card p-6">
-        <div className="grid gap-4 sm:grid-cols-2 text-sm">
+        <div className="grid gap-2 sm:grid-cols-2 sm:gap-4 text-sm">
           <div>
             <span className="text-muted-foreground">주문번호</span>
             <p className="font-bold text-primary">{order.id}</p>
@@ -567,7 +567,7 @@ export function OrderDetailClient({
                             alt={`카드 #${cardIndex + 1} ${p.label}`}
                             className="h-28 w-20 rounded-md border border-border object-cover sm:h-32 sm:w-24"
                           />
-                          <span className="mt-1 text-[10px] text-muted-foreground">
+                          <span className="mt-1 text-[11px] text-muted-foreground">
                             {p.label}
                           </span>
                         </div>

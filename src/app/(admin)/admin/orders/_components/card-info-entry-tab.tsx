@@ -77,6 +77,22 @@ export function CardInfoEntryTab({
             </span>{" "}
             / 표시 {totalCards}장
           </p>
+          {totalCards > 0 && (
+            <div className="mt-2 flex items-center gap-2">
+              <div className="h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full rounded-full bg-success transition-all"
+                  style={{
+                    width: `${((totalCards - pendingCards) / totalCards) * 100}%`,
+                  }}
+                />
+              </div>
+              <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
+                {Math.round(((totalCards - pendingCards) / totalCards) * 100)}%
+                완료
+              </span>
+            </div>
+          )}
         </div>
 
         {filtered.length === 0 ? (
@@ -403,7 +419,7 @@ function CardRowDesktop({
           }}
           placeholder="예: Pikachu"
           disabled={ed.isPending}
-          className="w-full rounded-md border border-border bg-background px-2 py-1 text-sm"
+          className="w-full rounded-md border border-border bg-background px-2 py-1 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           autoComplete="off"
         />
         {ac.isOpen && ac.pos && ac.suggestions.length > 0 && (
@@ -424,7 +440,7 @@ function CardRowDesktop({
           onChange={(e) => ed.setSetName(e.target.value)}
           placeholder="세트"
           disabled={ed.isPending}
-          className="w-full rounded-md border border-border bg-background px-2 py-1 text-sm"
+          className="w-full rounded-md border border-border bg-background px-2 py-1 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
       </td>
       <td className="px-3 py-3">
@@ -434,7 +450,7 @@ function CardRowDesktop({
           onChange={(e) => ed.setCardNumber(e.target.value)}
           placeholder="번호"
           disabled={ed.isPending}
-          className="w-full rounded-md border border-border bg-background px-2 py-1 text-sm"
+          className="w-full rounded-md border border-border bg-background px-2 py-1 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
       </td>
       <td className="px-3 py-3">
@@ -444,7 +460,7 @@ function CardRowDesktop({
           onChange={(e) => ed.setYear(e.target.value)}
           placeholder="연도"
           disabled={ed.isPending}
-          className="w-full rounded-md border border-border bg-background px-2 py-1 text-sm"
+          className="w-full rounded-md border border-border bg-background px-2 py-1 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
       </td>
       <td className="px-3 py-3">
@@ -569,7 +585,7 @@ function CardRowMobile({
             }}
             placeholder="예: Pikachu"
             disabled={ed.isPending}
-            className="mt-0.5 w-full rounded-md border border-border bg-background px-2 py-2 text-sm"
+            className="mt-0.5 w-full rounded-md border border-border bg-background px-2 py-2 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
             autoComplete="off"
           />
           {ac.isOpen && ac.pos && ac.suggestions.length > 0 && (
@@ -593,7 +609,7 @@ function CardRowMobile({
               onChange={(e) => ed.setSetName(e.target.value)}
               placeholder="세트"
               disabled={ed.isPending}
-              className="mt-0.5 w-full rounded-md border border-border bg-background px-2 py-2 text-sm"
+              className="mt-0.5 w-full rounded-md border border-border bg-background px-2 py-2 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </label>
           <label className="block text-xs">
@@ -604,7 +620,7 @@ function CardRowMobile({
               onChange={(e) => ed.setCardNumber(e.target.value)}
               placeholder="번호"
               disabled={ed.isPending}
-              className="mt-0.5 w-full rounded-md border border-border bg-background px-2 py-2 text-sm"
+              className="mt-0.5 w-full rounded-md border border-border bg-background px-2 py-2 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </label>
           <label className="block text-xs">
@@ -615,7 +631,7 @@ function CardRowMobile({
               onChange={(e) => ed.setYear(e.target.value)}
               placeholder="연도"
               disabled={ed.isPending}
-              className="mt-0.5 w-full rounded-md border border-border bg-background px-2 py-2 text-sm"
+              className="mt-0.5 w-full rounded-md border border-border bg-background px-2 py-2 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </label>
         </div>

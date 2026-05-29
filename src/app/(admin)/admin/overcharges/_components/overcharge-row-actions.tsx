@@ -53,21 +53,21 @@ export function OverchargeRowActions({
 
   return (
     <div className="flex flex-col gap-1">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-col gap-2 md:flex-row md:items-center">
         <input
           type="number"
           min={0}
           step={1000}
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
-          className="w-28 rounded-md border border-border bg-background px-2 py-1 text-xs"
+          className="w-full rounded-md border border-border bg-background px-2 py-2 text-sm md:w-28 md:py-1 md:text-xs"
           disabled={isPending}
         />
         <button
           type="button"
           onClick={persistAmount}
           disabled={isPending || amount === String(initialAmount)}
-          className="rounded-md border border-border px-2 py-1 text-xs disabled:opacity-50"
+          className="w-full rounded-md border border-border px-2 py-2 text-sm disabled:opacity-50 md:w-auto md:py-1 md:text-xs"
         >
           {isPending ? "..." : "금액 저장"}
         </button>
@@ -75,7 +75,7 @@ export function OverchargeRowActions({
           type="button"
           onClick={sendNotice}
           disabled={isPending}
-          className="rounded-md bg-primary px-2 py-1 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+          className="w-full rounded-md bg-primary px-2 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 md:w-auto md:py-1 md:text-xs"
         >
           결제 안내 발송
         </button>

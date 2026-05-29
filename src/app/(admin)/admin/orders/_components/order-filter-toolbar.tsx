@@ -73,14 +73,14 @@ export function OrderFilterToolbar({
 
   return (
     <div className="flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card p-4">
-      <div className="flex min-w-48 flex-1 flex-col gap-1">
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
         <label className="text-xs text-muted-foreground">검색</label>
         <input
           type="text"
           value={state.query}
           onChange={(e) => onChange((p) => ({ ...p, query: e.target.value }))}
           placeholder="주문번호 · 고객 이름"
-          className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+          className="rounded-md border border-border bg-background px-3 py-2 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
       </div>
 
@@ -89,7 +89,7 @@ export function OrderFilterToolbar({
         <select
           value={state.company}
           onChange={(e) => handleCompany(e.target.value)}
-          className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+          className="rounded-md border border-border bg-background px-3 py-2 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
         >
           <option value="">전체 회사</option>
           {GRADING_COMPANIES.map((c) => (
@@ -105,7 +105,7 @@ export function OrderFilterToolbar({
         <select
           value={state.service}
           onChange={(e) => onChange((p) => ({ ...p, service: e.target.value }))}
-          className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+          className="rounded-md border border-border bg-background px-3 py-2 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
         >
           <option value="">전체 서비스</option>
           {serviceOptions.map((s) => (
@@ -122,7 +122,7 @@ export function OrderFilterToolbar({
           <select
             value={state.status}
             onChange={(e) => onChange((p) => ({ ...p, status: e.target.value }))}
-            className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+            className="rounded-md border border-border bg-background px-3 py-2 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           >
             <option value="">전체 상태</option>
             {STATUS_OPTIONS.map((s) => (
@@ -144,7 +144,7 @@ export function OrderFilterToolbar({
               sort: e.target.value as OrderFilterState["sort"],
             }))
           }
-          className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+          className="rounded-md border border-border bg-background px-3 py-2 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
         >
           <option value="newest">최신순</option>
           <option value="oldest">오래된순</option>

@@ -74,12 +74,12 @@ export default async function AdminDashboardPage() {
       </div>
 
       {/* 핵심 지표 */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((s) => (
           <Link
             key={s.label}
             href={s.href}
-            className="rounded-xl border border-border bg-card p-5 transition-colors hover:border-primary/50"
+            className="rounded-xl border border-border bg-card p-3 transition-colors hover:border-primary/50 sm:p-5"
           >
             <p className="text-sm text-muted-foreground">{s.label}</p>
             <p className="mt-2 text-3xl font-bold">{s.value}</p>
