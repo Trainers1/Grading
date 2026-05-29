@@ -17,6 +17,12 @@ export interface OrderGroupFormData {
   serviceLevel: string;
   /** 카드 매수 (1 이상) */
   quantity: number;
+  /**
+   * 각 카드의 앞면 이미지 파일.
+   * 배열 길이는 quantity 와 항상 일치하도록 step1 에서 동기화한다.
+   * 제출 단계에서 모든 슬롯이 File 이어야 통과한다.
+   */
+  frontImages: (File | null)[];
 }
 
 /** 택배 수령 시 배송 주소 출처 */
@@ -56,7 +62,22 @@ export function createInitialGroup(): OrderGroupFormData {
     gradingCompany: "",
     serviceLevel: "",
     quantity: 1,
+    frontImages: [null],
   };
+}
+
+/**
+ * 수량 변경 시 이미지 슬롯 배열을 동기화한다.
+ * - 늘어나면 끝에 null 슬롯 추가
+ * - 줄어들면 끝부터 잘라낸다 (앞쪽 업로드 보존)
+ */
+export function syncFrontImageSlots(
+  prev: (File | null)[],
+  nextQuantity: number
+): (File | null)[] {
+  if (prev.length === nextQuantity) return prev;
+  if (prev.length > nextQuantity) return prev.slice(0, nextQuantity);
+  return [...prev, ...Array(nextQuantity - prev.length).fill(null)];
 }
 
 export const INITIAL_FORM: ApplyFormData = {

@@ -346,6 +346,71 @@ export async function updateOrderSpoilerPreferenceAction(input: {
   return { ok: true };
 }
 
+// ── 신청 단계 카드 앞면 이미지 업로드 ────────────────────────────────────────
+// 주문 생성 직전에 클라이언트에서 호출. 파일을 card-images 공개 버킷의
+// apply/{userId}/{uuid}.{ext} 경로에 올리고 public URL 을 반환한다.
+// 반환된 URL 은 곧바로 createOrdersAction.input.groups[i].frontImageUrls 로
+// 전달되어 cards.front_image_url 컬럼에 저장된다.
+//
+// 주문 생성에 실패해도 파일은 남지만, 공개 버킷이라 보안 문제는 없다.
+// 추후 정기 정리 job 이 필요하다면 created_at < N-day 인 apply/* 객체를 삭제.
+
+const APPLY_IMAGE_BUCKET = "card-images";
+const APPLY_IMAGE_EXT: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+};
+const APPLY_IMAGE_MAX_BYTES = 10 * 1024 * 1024;
+
+export type UploadApplyCardImageResult =
+  | { ok: false; error: string }
+  | { ok: true; url: string };
+
+export async function uploadApplyCardImageAction(
+  formData: FormData
+): Promise<UploadApplyCardImageResult> {
+  const supabase = await createServerClient();
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) {
+    return { ok: false, error: "로그인이 필요합니다." };
+  }
+
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) {
+    return { ok: false, error: "업로드할 이미지를 선택해 주세요." };
+  }
+
+  const ext = APPLY_IMAGE_EXT[file.type];
+  if (!ext) {
+    return { ok: false, error: "JPG 또는 PNG 파일만 업로드할 수 있습니다." };
+  }
+  if (file.size > APPLY_IMAGE_MAX_BYTES) {
+    return { ok: false, error: "이미지 크기는 10MB 이하여야 합니다." };
+  }
+
+  let service;
+  try {
+    service = createServiceClient();
+  } catch (err) {
+    console.error("[apply-upload] service-role unavailable", err);
+    return { ok: false, error: "서비스가 일시적으로 불가능합니다." };
+  }
+
+  const path = `apply/${auth.user.id}/${randomUUID()}.${ext}`;
+  const { error: upErr } = await service.storage
+    .from(APPLY_IMAGE_BUCKET)
+    .upload(path, file, { contentType: file.type, upsert: false });
+  if (upErr) {
+    console.error("[apply-upload] storage upload failed", upErr);
+    return { ok: false, error: "이미지 업로드에 실패했습니다." };
+  }
+
+  const { data: pub } = service.storage
+    .from(APPLY_IMAGE_BUCKET)
+    .getPublicUrl(path);
+  return { ok: true, url: pub.publicUrl };
+}
+
 // 주문 생성 Server Action (고객 측 apply 폼)
 //
 // 흐름:
@@ -377,6 +442,12 @@ export type OrderGroupSubmission = {
   serviceLevel: string;
   /** 1 이상의 카드 매수. 카드별 상세 정보는 직원이 수령 시 입력. */
   quantity: number;
+  /**
+   * 카드 앞면 이미지 URL 목록. 길이는 quantity 와 동일해야 한다.
+   * 사전에 uploadApplyCardImageAction 으로 Supabase Storage 에 올린 후
+   * 반환된 public URL 을 그대로 넘긴다.
+   */
+  frontImageUrls: string[];
 };
 
 export type CreateOrdersInput = {
@@ -468,6 +539,18 @@ export async function createOrdersAction(
         error: `주문 #${i + 1}: 카드 매수는 1 이상의 정수여야 합니다.`,
       };
     }
+    if (
+      !Array.isArray(g.frontImageUrls) ||
+      g.frontImageUrls.length !== g.quantity ||
+      g.frontImageUrls.some(
+        (url) => typeof url !== "string" || !url.startsWith("http")
+      )
+    ) {
+      return {
+        ok: false,
+        error: `주문 #${i + 1}: 카드 매수만큼 앞면 이미지를 모두 업로드해 주세요.`,
+      };
+    }
   }
   if (input.pickupMethod === "DELIVERY" && !input.deliveryAddress?.trim()) {
     return { ok: false, error: "배송 주소를 입력해 주세요." };
@@ -506,21 +589,29 @@ export async function createOrdersAction(
     };
   }
 
-  // 3) (그레이딩사, 서비스등급) 조합별로 매수 합산
+  // 3) (그레이딩사, 서비스등급) 조합별로 매수 합산. 같은 조합의 이미지 URL 은
+  //    순서대로 이어 붙여서 카드 INSERT 시 인덱스로 매핑한다.
   const groups = new Map<
     string,
-    { gradingCompany: GradingCompany; serviceLevel: string; quantity: number }
+    {
+      gradingCompany: GradingCompany;
+      serviceLevel: string;
+      quantity: number;
+      frontImageUrls: string[];
+    }
   >();
   for (const g of input.groups) {
     const key = `${g.gradingCompany}::${g.serviceLevel}`;
     const existing = groups.get(key);
     if (existing) {
       existing.quantity += g.quantity;
+      existing.frontImageUrls = [...existing.frontImageUrls, ...g.frontImageUrls];
     } else {
       groups.set(key, {
         gradingCompany: g.gradingCompany,
         serviceLevel: g.serviceLevel,
         quantity: g.quantity,
+        frontImageUrls: [...g.frontImageUrls],
       });
     }
   }
@@ -529,7 +620,7 @@ export async function createOrdersAction(
 
   // 4) 그룹마다 주문 생성
   for (const group of groups.values()) {
-    const { gradingCompany, serviceLevel, quantity } = group;
+    const { gradingCompany, serviceLevel, quantity, frontImageUrls } = group;
 
     // 4a) 서비스 단가 스냅샷
     const { data: svc, error: sErr } = await service
@@ -607,16 +698,17 @@ export async function createOrdersAction(
     }
     createdOrderIds.push(newOrderId);
 
-    // 4d) cards 삽입 — quantity 만큼 빈 row 생성. 카드별 상세 정보는
-    //     매장 직원이 카드 수령 시 어드민 페이지에서 보강한다.
-    const cardRows = Array.from({ length: quantity }, () => ({
+    // 4d) cards 삽입 — quantity 만큼 row 생성. 앞면 이미지는 신청 단계에서
+    //     사용자가 업로드한 URL 을 그대로 사용. 카드명·세트·연도 등은 매장
+    //     직원이 카드 수령 시 어드민 페이지에서 보강한다.
+    const cardRows = Array.from({ length: quantity }, (_, idx) => ({
       order_id: newOrderId,
       english_name: null,
       set_name: null,
       card_number: null,
       year: null,
       declared_value: null,
-      front_image_url: null,
+      front_image_url: frontImageUrls[idx] ?? null,
       back_image_url: null,
     }));
 

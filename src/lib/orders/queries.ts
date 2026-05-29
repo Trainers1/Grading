@@ -83,10 +83,13 @@ export async function getMyOrders(): Promise<Order[]> {
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return [];
 
+  // 취소된 주문(cancelled_at IS NOT NULL)은 신청내역에서 숨긴다.
+  // 직접 URL 로 접근하는 상세 페이지(getMyOrderById)는 그대로 노출 — 이력 보존.
   const { data, error } = await supabase
     .from("orders")
     .select("*")
     .eq("user_id", auth.user.id)
+    .is("cancelled_at", null)
     .order("created_at", { ascending: false });
 
   if (error) {

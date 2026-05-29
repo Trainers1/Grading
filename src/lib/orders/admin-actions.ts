@@ -744,24 +744,39 @@ export async function updateCardDetailsAction(
     return { ok: false, error: "카드 ID 가 필요합니다." };
   }
 
-  const declared =
-    input.declaredValue === undefined || input.declaredValue === null
-      ? null
-      : Number(input.declaredValue);
-  if (declared !== null && (!Number.isFinite(declared) || declared < 0)) {
-    return { ok: false, error: "신고가액이 올바르지 않습니다." };
+  // declaredValue 가 호출자에 의해 명시적으로 전달되지 않으면(undefined) 컬럼을
+  // update payload 에서 제외 — 기존 DB 값을 그대로 보존한다. 명시적 null 만
+  // 의도된 wipe 로 해석한다. (UI에서 신고가액 입력 제거 이후로도 legacy 데이터
+  // 가 카드별로 살아있을 수 있어 보존이 안전.)
+  const updatePayload: {
+    english_name: string | null;
+    set_name: string | null;
+    card_number: string | null;
+    year: string | null;
+    declared_value?: number | null;
+  } = {
+    english_name: input.englishName?.trim() || null,
+    set_name: input.setName?.trim() || null,
+    card_number: input.cardNumber?.trim() || null,
+    year: input.year?.trim() || null,
+  };
+
+  if (input.declaredValue !== undefined) {
+    if (input.declaredValue === null) {
+      updatePayload.declared_value = null;
+    } else {
+      const declared = Number(input.declaredValue);
+      if (!Number.isFinite(declared) || declared < 0) {
+        return { ok: false, error: "신고가액이 올바르지 않습니다." };
+      }
+      updatePayload.declared_value = declared;
+    }
   }
 
   const service = createServiceClient();
   const { data: updated, error } = await service
     .from("cards")
-    .update({
-      english_name: input.englishName?.trim() || null,
-      set_name: input.setName?.trim() || null,
-      card_number: input.cardNumber?.trim() || null,
-      year: input.year?.trim() || null,
-      declared_value: declared,
-    })
+    .update(updatePayload)
     .eq("id", input.cardId)
     .select("order_id")
     .maybeSingle();

@@ -10,6 +10,7 @@ import { RadioGroup } from "@/components/ui/radio-group";
 import { INITIAL_FORM, type ApplyFormData } from "@/types/apply-form";
 import {
   createOrdersAction,
+  uploadApplyCardImageAction,
   type PaymentMethodChoice,
 } from "@/lib/orders/actions";
 import type { GradingCompany, GradingService } from "@/types";
@@ -83,7 +84,7 @@ export function ApplyForm({
     const errs: string[] = [];
 
     switch (currentStep) {
-      case 1: // 그레이딩 옵션 + 매수
+      case 1: // 그레이딩 옵션 + 매수 + 앞면 이미지
         formData.groups.forEach((g, i) => {
           if (!g.gradingCompany)
             errs.push(`주문 #${i + 1}: 그레이딩사를 선택해 주세요.`);
@@ -91,6 +92,15 @@ export function ApplyForm({
             errs.push(`주문 #${i + 1}: 서비스 등급을 선택해 주세요.`);
           if (!Number.isInteger(g.quantity) || g.quantity < 1)
             errs.push(`주문 #${i + 1}: 카드 매수는 1 이상이어야 합니다.`);
+          // 카드 매수만큼 앞면 이미지 모두 업로드 필수.
+          if (
+            g.frontImages.length !== g.quantity ||
+            g.frontImages.some((f) => !(f instanceof File))
+          ) {
+            errs.push(
+              `주문 #${i + 1}: 매수만큼 카드 앞면 이미지를 모두 업로드해 주세요.`
+            );
+          }
         });
         break;
       case 2: // 수령 방식
@@ -144,6 +154,36 @@ export function ApplyForm({
     }
 
     startTransition(async () => {
+      // 1) 모든 카드 앞면 이미지를 Supabase Storage 에 선업로드.
+      //    그룹 내·그룹 간 모두 병렬 — 50장 가까이 올라가는 경우에도 체감 시간 단축.
+      let uploadedUrls: string[][];
+      try {
+        uploadedUrls = await Promise.all(
+          formData.groups.map(async (g) =>
+            Promise.all(
+              g.frontImages.map(async (file) => {
+                if (!(file instanceof File)) {
+                  throw new Error("업로드되지 않은 이미지 슬롯이 있습니다.");
+                }
+                const fd = new FormData();
+                fd.append("file", file);
+                const res = await uploadApplyCardImageAction(fd);
+                if (!res.ok) throw new Error(res.error);
+                return res.url;
+              })
+            )
+          )
+        );
+      } catch (err) {
+        setErrors([
+          err instanceof Error
+            ? err.message
+            : "이미지 업로드 중 오류가 발생했습니다.",
+        ]);
+        return;
+      }
+
+      // 2) 업로드된 URL 을 그룹별로 묶어 주문 생성.
       const result = await createOrdersAction({
         pickupMethod: formData.pickupMethod,
         postalCode: resolvedPostalCode,
@@ -152,10 +192,11 @@ export function ApplyForm({
         spoilerPreference: formData.spoilerPreference,
         customerMemo: formData.customerMemo,
         paymentMethod: formData.paymentMethod,
-        groups: formData.groups.map((g) => ({
+        groups: formData.groups.map((g, i) => ({
           gradingCompany: g.gradingCompany as GradingCompany,
           serviceLevel: g.serviceLevel,
           quantity: g.quantity,
+          frontImageUrls: uploadedUrls[i],
         })),
       });
 

@@ -239,6 +239,35 @@ export async function signUpAction(params: {
     return { ok: false, error: FALLBACK_ERROR };
   }
 
+  // 이메일·연락처 중복 사전 체크 — service-role 로 RLS 우회.
+  // supabase.auth.signUp 도 이메일 중복은 "already registered" 로 알려주지만
+  // 메시지 의존이 깨지기 쉽고, 연락처는 따로 검사하지 않는다.
+  // profiles 행이 생긴 뒤(트리거 실행 후) 에 잡으면 auth.users 고아 행이 남으므로
+  // 가능한 한 호출 이전 단계에서 막아낸다.
+  try {
+    const dupCheck = createServiceClient();
+    const { data: dupEmail } = await dupCheck
+      .from("profiles")
+      .select("id")
+      .ilike("email", email)
+      .maybeSingle();
+    if (dupEmail) {
+      return { ok: false, error: "이미 가입된 이메일입니다." };
+    }
+    const { data: dupPhone } = await dupCheck
+      .from("profiles")
+      .select("id")
+      .eq("phone", phone)
+      .maybeSingle();
+    if (dupPhone) {
+      return { ok: false, error: "이미 가입된 연락처입니다." };
+    }
+  } catch (err) {
+    // 사전 체크 실패는 진행 차단까지는 아니고 로깅만. 동시 가입 race 도
+    // partial unique index 가 추가로 잡아낸다.
+    console.error("[auth] signUp duplicate pre-check failed", err);
+  }
+
   // raw_user_meta_data 에는 트리거가 profiles 행 생성 시 참조하는 최소 필드만 둔다.
   // 계좌·주소 등 민감 정보는 server action 이 직접 profiles 에 기록하는 방식이
   // 더 안전하지만, 현재 트리거가 metadata 전체를 신뢰하는 구조라 일단 동일하게

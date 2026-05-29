@@ -98,7 +98,6 @@ export function CardInfoEntryTab({
                   <th className="px-3 py-3">세트 *</th>
                   <th className="px-3 py-3">번호 *</th>
                   <th className="px-3 py-3">연도 *</th>
-                  <th className="px-3 py-3">신고가액</th>
                   <th className="px-3 py-3">앞면 이미지</th>
                   <th className="px-3 py-3 text-right">관리</th>
                 </tr>
@@ -140,9 +139,6 @@ function useCardEditor(card: Card) {
   const [setName, setSetName] = useState(card.setName ?? "");
   const [cardNumber, setCardNumber] = useState(card.cardNumber ?? "");
   const [year, setYear] = useState(card.year ?? "");
-  const [declaredValue, setDeclaredValue] = useState<string>(
-    card.declaredValue ? String(card.declaredValue) : ""
-  );
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -156,14 +152,7 @@ function useCardEditor(card: Card) {
     setSetName(card.setName ?? "");
     setCardNumber(card.cardNumber ?? "");
     setYear(card.year ?? "");
-    setDeclaredValue(card.declaredValue ? String(card.declaredValue) : "");
-  }, [
-    card.englishName,
-    card.setName,
-    card.cardNumber,
-    card.year,
-    card.declaredValue,
-  ]);
+  }, [card.englishName, card.setName, card.cardNumber, card.year]);
 
   const isComplete =
     !!englishName.trim() &&
@@ -172,16 +161,6 @@ function useCardEditor(card: Card) {
     !!year.trim();
 
   const save = () => {
-    const parsedDeclared = declaredValue.trim()
-      ? Number(declaredValue.replace(/,/g, ""))
-      : null;
-    if (
-      parsedDeclared !== null &&
-      (!Number.isFinite(parsedDeclared) || parsedDeclared < 0)
-    ) {
-      setError("신고가액은 0 이상의 숫자여야 합니다.");
-      return;
-    }
     setError(null);
     setNotice(null);
     startTransition(async () => {
@@ -191,7 +170,6 @@ function useCardEditor(card: Card) {
         setName: setName.trim() || undefined,
         cardNumber: cardNumber.trim() || undefined,
         year: year.trim() || undefined,
-        declaredValue: parsedDeclared,
       });
       if (!result.ok) {
         setError(result.error);
@@ -207,7 +185,6 @@ function useCardEditor(card: Card) {
     setSetName(t.setName);
     setCardNumber(t.cardNumber);
     setYear(t.year);
-    setDeclaredValue(t.declaredValue ? String(t.declaredValue) : "");
   };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -264,8 +241,6 @@ function useCardEditor(card: Card) {
     setCardNumber,
     year,
     setYear,
-    declaredValue,
-    setDeclaredValue,
     error,
     notice,
     isPending,
@@ -373,9 +348,6 @@ function AutocompleteDropdown({
               </div>
               <div className="mt-0.5 truncate text-[10px] text-muted-foreground">
                 {t.setName} · #{t.cardNumber} · {t.year}
-                {t.declaredValue
-                  ? ` · ₩${t.declaredValue.toLocaleString("ko-KR")}`
-                  : ""}
               </div>
             </div>
           </button>
@@ -471,17 +443,6 @@ function CardRowDesktop({
           value={ed.year}
           onChange={(e) => ed.setYear(e.target.value)}
           placeholder="연도"
-          disabled={ed.isPending}
-          className="w-full rounded-md border border-border bg-background px-2 py-1 text-sm"
-        />
-      </td>
-      <td className="px-3 py-3">
-        <input
-          type="text"
-          inputMode="numeric"
-          value={ed.declaredValue}
-          onChange={(e) => ed.setDeclaredValue(e.target.value)}
-          placeholder="원"
           disabled={ed.isPending}
           className="w-full rounded-md border border-border bg-background px-2 py-1 text-sm"
         />
@@ -653,18 +614,6 @@ function CardRowMobile({
               value={ed.year}
               onChange={(e) => ed.setYear(e.target.value)}
               placeholder="연도"
-              disabled={ed.isPending}
-              className="mt-0.5 w-full rounded-md border border-border bg-background px-2 py-2 text-sm"
-            />
-          </label>
-          <label className="block text-xs">
-            <span className="text-muted-foreground">신고가액</span>
-            <input
-              type="text"
-              inputMode="numeric"
-              value={ed.declaredValue}
-              onChange={(e) => ed.setDeclaredValue(e.target.value)}
-              placeholder="원"
               disabled={ed.isPending}
               className="mt-0.5 w-full rounded-md border border-border bg-background px-2 py-2 text-sm"
             />

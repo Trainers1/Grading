@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { GRADING_COMPANIES } from "@/constants/grading";
 import type { ApplyFormData, OrderGroupFormData } from "@/types/apply-form";
-import { createInitialGroup } from "@/types/apply-form";
+import { createInitialGroup, syncFrontImageSlots } from "@/types/apply-form";
 import type { GradingCompany, GradingService } from "@/types";
 
 interface Step1Props {
@@ -17,12 +18,34 @@ interface Step1Props {
 }
 
 const MAX_QUANTITY = 50;
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png"];
 
 export function Step1CardGrading({ data, onChange, services }: Step1Props) {
   const updateGroup = (index: number, updates: Partial<OrderGroupFormData>) => {
     const next = [...data.groups];
     next[index] = { ...next[index], ...updates };
     onChange({ groups: next });
+  };
+
+  // 수량 변경 시 frontImages 슬롯 배열도 함께 동기화한다.
+  const updateGroupQuantity = (index: number, quantity: number) => {
+    const current = data.groups[index];
+    updateGroup(index, {
+      quantity,
+      frontImages: syncFrontImageSlots(current.frontImages, quantity),
+    });
+  };
+
+  const updateGroupImage = (
+    index: number,
+    slotIdx: number,
+    file: File | null
+  ) => {
+    const current = data.groups[index];
+    const arr = [...current.frontImages];
+    arr[slotIdx] = file;
+    updateGroup(index, { frontImages: arr });
   };
 
   const addGroup = () => {
@@ -158,9 +181,10 @@ export function Step1CardGrading({ data, onChange, services }: Step1Props) {
                   size="sm"
                   disabled={group.quantity <= 1}
                   onClick={() =>
-                    updateGroup(index, {
-                      quantity: Math.max(1, group.quantity - 1),
-                    })
+                    updateGroupQuantity(
+                      index,
+                      Math.max(1, group.quantity - 1)
+                    )
                   }
                 >
                   −
@@ -176,7 +200,7 @@ export function Step1CardGrading({ data, onChange, services }: Step1Props) {
                     const v = Number.isFinite(raw)
                       ? Math.min(Math.max(1, Math.floor(raw)), MAX_QUANTITY)
                       : 1;
-                    updateGroup(index, { quantity: v });
+                    updateGroupQuantity(index, v);
                   }}
                   className="w-24 text-center"
                 />
@@ -186,9 +210,10 @@ export function Step1CardGrading({ data, onChange, services }: Step1Props) {
                   size="sm"
                   disabled={group.quantity >= MAX_QUANTITY}
                   onClick={() =>
-                    updateGroup(index, {
-                      quantity: Math.min(MAX_QUANTITY, group.quantity + 1),
-                    })
+                    updateGroupQuantity(
+                      index,
+                      Math.min(MAX_QUANTITY, group.quantity + 1)
+                    )
                   }
                 >
                   +
@@ -203,6 +228,30 @@ export function Step1CardGrading({ data, onChange, services }: Step1Props) {
                 </p>
               )}
             </div>
+
+            {/* 카드 앞면 이미지 — 매수만큼 슬롯 표시 */}
+            <div className="space-y-2">
+              <Label>
+                카드 앞면 이미지 <span className="text-error">*</span>
+                <span className="ml-2 text-xs font-normal text-muted-foreground">
+                  매수만큼 모든 슬롯을 업로드해 주세요
+                </span>
+              </Label>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {group.frontImages.map((file, slotIdx) => (
+                  <CardImageSlot
+                    key={`${group.id}-slot-${slotIdx}`}
+                    file={file}
+                    slotIndex={slotIdx}
+                    onChange={(next) => updateGroupImage(index, slotIdx, next)}
+                  />
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                JPG/PNG, 슬롯당 최대 10MB. 흐릿하거나 잘리지 않게 카드 전체가
+                보이도록 촬영해 주세요.
+              </p>
+            </div>
           </div>
         );
       })}
@@ -215,6 +264,103 @@ export function Step1CardGrading({ data, onChange, services }: Step1Props) {
       >
         + 다른 그레이딩사/등급 추가
       </Button>
+    </div>
+  );
+}
+
+interface CardImageSlotProps {
+  file: File | null;
+  slotIndex: number;
+  onChange: (file: File | null) => void;
+}
+
+function CardImageSlot({ file, slotIndex, onChange }: CardImageSlotProps) {
+  const [error, setError] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  // 미리보기 URL은 File 이 바뀔 때만 새로 만들고 unmount 시 해제한다.
+  useEffect(() => {
+    if (!file) {
+      setPreviewUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+    return () => {
+      URL.revokeObjectURL(url);
+    };
+  }, [file]);
+
+  const inputId = `card-front-${slotIndex}-${Math.random().toString(36).slice(2, 8)}`;
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const picked = e.target.files?.[0] ?? null;
+    if (!picked) {
+      onChange(null);
+      setError(null);
+      return;
+    }
+    if (!ACCEPTED_IMAGE_TYPES.includes(picked.type)) {
+      setError("JPG/PNG만 가능");
+      e.target.value = "";
+      return;
+    }
+    if (picked.size > MAX_IMAGE_BYTES) {
+      setError("10MB 초과");
+      e.target.value = "";
+      return;
+    }
+    setError(null);
+    onChange(picked);
+    // 같은 파일 재선택 가능하도록 input value 리셋
+    e.target.value = "";
+  };
+
+  return (
+    <div className="flex flex-col gap-1">
+      <label
+        htmlFor={inputId}
+        className={cn(
+          "group relative flex aspect-[3/4] cursor-pointer items-center justify-center overflow-hidden rounded-lg border-2 border-dashed bg-muted/30 transition-colors",
+          file
+            ? "border-primary/40"
+            : "border-border hover:border-primary/40 hover:bg-muted/50"
+        )}
+      >
+        {previewUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={previewUrl}
+            alt={`카드 #${slotIndex + 1} 앞면`}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="flex flex-col items-center gap-1 text-center text-muted-foreground">
+            <span className="text-xs font-medium">카드 #{slotIndex + 1}</span>
+            <span className="text-[11px]">탭하여 업로드</span>
+          </div>
+        )}
+        <input
+          id={inputId}
+          type="file"
+          accept="image/jpeg,image/png"
+          onChange={handleFileChange}
+          className="sr-only"
+        />
+      </label>
+      {file && (
+        <button
+          type="button"
+          onClick={() => {
+            onChange(null);
+            setError(null);
+          }}
+          className="text-[11px] text-error hover:underline"
+        >
+          제거
+        </button>
+      )}
+      {error && <p className="text-[11px] text-error">{error}</p>}
     </div>
   );
 }
